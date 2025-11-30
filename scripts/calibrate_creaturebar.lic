@@ -102,7 +102,7 @@ module CreatureBarCalibrate
     def load_config(silhouette = nil)
       silhouette ||= @@current_family
 
-      # Load main config.yaml for HP bar, colors, fonts, status settings
+      # Load main config.yaml for GLOBAL settings
       if File.exist?(CONFIG_FILE)
         begin
           @@main_config = YAML.load_file(CONFIG_FILE)
@@ -113,50 +113,33 @@ module CreatureBarCalibrate
         @@main_config = {}
       end
 
-      # Load silhouette-specific config
+      # Load ONLY body_parts from silhouette-specific config
       config_file = File.join(SILHOUETTE_CONFIG_DIR, "#{silhouette}.yaml")
 
+      body_parts = {}
       if File.exist?(config_file)
         begin
-          @@config = YAML.load_file(config_file)
+          silhouette_data = YAML.load_file(config_file)
+          body_parts = silhouette_data['body_parts'] || {}
         rescue => e
-          @@config = { 'scale' => 1.0, 'panel_width' => 100, 'panel_height' => 220, 'marker_size' => 12, 'body_parts' => {} }
-        end
-      else
-        @@config = { 'scale' => 1.0, 'panel_width' => 100, 'panel_height' => 220, 'marker_size' => 12, 'body_parts' => {} }
-      end
-
-      # Merge with global config for any missing display settings
-      # This ensures we don't save hardcoded defaults when user loads old configs
-      @@config['name_display'] ||= {}
-      @@config['hp_bar'] ||= {}
-      @@config['status'] ||= {}
-
-      # Merge each section with global defaults
-      # IMPORTANT: Check for nil specifically, not falsy (false is a valid value!)
-      if @@main_config['name_display']
-        @@main_config['name_display'].each do |key, value|
-          if @@config['name_display'][key].nil?
-            @@config['name_display'][key] = value
-          end
+          body_parts = {}
         end
       end
 
-      if @@main_config['hp_bar']
-        @@main_config['hp_bar'].each do |key, value|
-          next if key == 'ranges'  # Don't merge ranges
-          @@config['hp_bar'][key] = value if @@config['hp_bar'][key].nil?
-        end
-      end
-
-      if @@main_config['status']
-        @@main_config['status'].each do |key, value|
-          @@config['status'][key] = value if @@config['status'][key].nil?
-        end
-      end
+      # Build config using GLOBAL settings from main config
+      @@config = {
+        'scale' => 1.0,  # ALWAYS 1.0 for calibration
+        'panel_width' => @@main_config['panel_width'] || 100,
+        'panel_height' => @@main_config['panel_height'] || 220,
+        'marker_size' => @@main_config['marker_size'] || 12,
+        'body_parts' => body_parts,
+        'name_display' => @@main_config['name_display'] || {},
+        'hp_bar' => @@main_config['hp_bar'] || {},
+        'status' => @@main_config['status'] || {}
+      }
 
       # Extract coordinates
-      @@coordinates = (@@config['body_parts'] || {}).dup
+      @@coordinates = body_parts.dup
 
       # Initialize any missing body parts with default coordinates (centered in layout)
       BODY_PARTS.each do |part|
@@ -165,19 +148,17 @@ module CreatureBarCalibrate
     end
 
     def save_config(show_popup = false)
-      unless @@config
-        @@config = {}
-      end
+      # Save ONLY body_parts to per-silhouette config
+      # All other settings (panel_width, panel_height, marker_size, scale, display settings)
+      # are now GLOBAL and live in main config.yaml
+      config_to_save = { 'body_parts' => @@coordinates }
 
-      @@config['body_parts'] = @@coordinates
-
-      # Save to silhouette-specific config file
       FileUtils.mkdir_p(SILHOUETTE_CONFIG_DIR) unless Dir.exist?(SILHOUETTE_CONFIG_DIR)
       config_file = File.join(SILHOUETTE_CONFIG_DIR, "#{@@current_family}.yaml")
-      File.write(config_file, @@config.to_yaml)
+      File.write(config_file, config_to_save.to_yaml)
 
       if show_popup
-        show_message("Settings saved for #{@@current_family}!\n\nAll silhouette settings saved:\n- Wound coordinates\n- Panel dimensions & scale\n- HP bar display\n- Name & status display")
+        show_message("Coordinates saved for #{@@current_family}!\n\n16 body part positions saved at scale 1.0")
       end
     rescue => e
       if show_popup
@@ -361,16 +342,8 @@ module CreatureBarCalibrate
       sil_tab.set_margin_left(10)
       sil_tab.set_margin_right(10)
 
-      # Scale
-      scale_box = Gtk::Box.new(:horizontal, 5)
-      scale_box.pack_start(Gtk::Label.new('Scale:'), expand: false, fill: false, padding: 5)
-      @@scale_entry = Gtk::Entry.new
-      @@scale_entry.text = (@@config['scale'] || 0.8).round(1).to_s
-      @@scale_entry.width_chars = 5
-      @@scale_entry.signal_connect('activate') { apply_scale }
-      @@scale_entry.signal_connect('focus-out-event') { apply_scale; false }
-      scale_box.pack_start(@@scale_entry, expand: false, fill: false, padding: 2)
-      sil_tab.pack_start(scale_box, expand: false, fill: false, padding: 5)
+      # Note: Scale is now GLOBAL (in main config.yaml)
+      # Calibration always happens at scale 1.0
 
       # Marker Size
       marker_box = Gtk::Box.new(:horizontal, 5)
@@ -923,25 +896,7 @@ module CreatureBarCalibrate
       end
     end
 
-    def apply_scale
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
-
-      begin
-        new_scale = @@scale_entry.text.to_f
-        new_scale = [[new_scale, 0.1].max, 5.0].min  # Clamp between 0.1 and 5.0
-
-        # Update config
-        @@config['scale'] = new_scale
-
-        # Update entry to show clamped value
-        @@scale_entry.text = new_scale.round(1).to_s
-
-        Gtk.queue do
-          reload_silhouette
-        end
-      rescue => e
-      end
-    end
+    # apply_scale removed - scale is now global, calibration always at 1.0
 
     def apply_panel_width
       return if @@loading_config  # Skip if loading config to prevent overwriting values

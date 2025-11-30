@@ -1,8 +1,4 @@
 ---
-scale: 0.8
-panel_width: 100
-panel_height: 175
-marker_size: 12
 body_parts:
   head:
   - 38
@@ -52,24 +48,3 @@ body_parts:
   nerves:
   - 74
   - 133
-name_display:
-  show: false
-  font_size: 8
-  font_family: ''
-  font_weight: normal
-  max_length: 30
-  mode: noun
-hp_bar:
-  height: 16
-  width: 80
-  show_text: false
-  show_percentage: true
-  text_style: overlay
-  show_hp_prefix: true
-  show_numbers: true
-  font_size: 11
-  show: true
-  show_bar: true
-status:
-  show: true
-  font_size: 8

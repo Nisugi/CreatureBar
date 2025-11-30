@@ -50,14 +50,41 @@ module CreatureBar
       'mode' => 'horizontal',  # 'vertical' or 'horizontal' - controls multi-creature panel arrangement
       'max_rows' => 2,         # Maximum rows before wrapping to next column (vertical mode)
       'max_columns' => 5       # Maximum columns before wrapping to next row (horizontal mode)
-      # Future: Allow positioning of elements like silhouette, stats, hp_bar, status
-      # Example future config:
-      # 'elements' => {
-      #   'silhouette' => { 'position' => 'left', 'show' => true },
-      #   'stats' => { 'position' => 'right', 'show' => true, 'attributes' => ['AS', 'DS', 'CS', 'TD'] },
-      #   'hp_bar' => { 'position' => 'right', 'order' => 2 },
-      #   'status' => { 'position' => 'right', 'order' => 3 }
-      # }
+    },
+    # GLOBAL silhouette settings (apply to all creatures)
+    'global_scale' => 1.0,      # Scale all silhouettes: 0.2 to 2.0
+    'panel_width' => 100,       # Uniform panel width for all creatures
+    'panel_height' => 220,      # Uniform panel height for all creatures
+    'marker_size' => 12,        # Base wound marker size (scales proportionally with global_scale)
+    # Display settings (apply to all creatures)
+    'name_display' => {
+      'show' => true,
+      'font_size' => 12,
+      'font_family' => '',
+      'font_weight' => 'bold',
+      'max_length' => 30,
+      'mode' => 'name'  # 'name' or 'noun'
+    },
+    'hp_bar' => {
+      'height' => 16,
+      'width' => 120,
+      'show_text' => true,
+      'show_percentage' => true,
+      'text_style' => 'overlay',
+      'font_size' => 11,
+      'ranges' => {
+        'low' => { 'min' => 0, 'max' => 33 },
+        'mid' => { 'min' => 34, 'max' => 66 },
+        'high' => { 'min' => 67, 'max' => 100 }
+      },
+      'show_hp_prefix' => false,
+      'show_numbers' => true,
+      'show' => true,
+      'show_bar' => true
+    },
+    'status' => {
+      'show' => true,
+      'font_size' => 12
     },
     'colors' => {
       # Window
@@ -94,9 +121,8 @@ module CreatureBar
     'wound_markers' => {
       'opacity' => 0.9
     }
-    # Note: hp_bar, status, and name_display are per-silhouette settings
-    # Note: body_parts and wound_markers.size are per-silhouette settings
-    # See data/creature_bar/silhouette_configs/*.yaml
+    # Note: Per-silhouette configs (data/creature_bar/silhouette_configs/*.yaml) contain ONLY body_parts coordinates
+    # All other settings (scale, panel dimensions, display settings) are GLOBAL and defined above
   }.freeze
 
   # Helper method to get status symbol from config
@@ -463,38 +489,44 @@ module CreatureBar
         respond "[CreatureBar] Now looking for: #{config_path}" if $creature_bar_debug
       end
 
+      # Load ONLY body_parts from per-silhouette config
+      body_parts = {}
       if File.exist?(config_path)
         begin
-          config = YAML.load_file(config_path)
-          @@silhouette_configs[family] = config
-
-          # Debug: Show first few body part coords
-          if $creature_bar_debug
-            sample_parts = config['body_parts']&.first(3) || []
-            respond "[CreatureBar] Loaded config for family '#{family}':"
-            respond "  - Config file: #{config_path}"
-            respond "  - Scale: #{config['scale']}"
-            respond "  - Panel width: #{config['panel_width']}"
-            respond "  - Marker size: #{config['marker_size']}"
-            respond "  - Body parts: #{config['body_parts']&.keys&.size || 0}"
-            sample_parts.each { |part, coords| respond "    - #{part}: #{coords.inspect}" }
-          end
-
-          return config
+          silhouette_data = YAML.load_file(config_path)
+          body_parts = silhouette_data['body_parts'] || {}
         rescue => e
           respond "[CreatureBar] Error loading silhouette config for #{family}: #{e.message}"
+          body_parts = {}
         end
       end
 
-      # Ultimate fallback: use DEFAULT_CONFIG body_parts
-      respond "[CreatureBar] Using minimal fallback silhouette config for family '#{family}'" if $creature_bar_debug
-      {
-        'scale' => 0.8,
-        'panel_width' => 100,
-        'panel_height' => 220,
-        'marker_size' => 12,
-        'body_parts' => {}
+      # Build config using GLOBAL settings from @@config
+      config = {
+        'body_parts' => body_parts,
+        'scale' => @@config['global_scale'] || 1.0,
+        'panel_width' => @@config['panel_width'] || 100,
+        'panel_height' => @@config['panel_height'] || 220,
+        'marker_size' => @@config['marker_size'] || 12,
+        'name_display' => @@config['name_display'] || {},
+        'hp_bar' => @@config['hp_bar'] || {},
+        'status' => @@config['status'] || {}
       }
+
+      # Debug: Show loaded config
+      if $creature_bar_debug
+        sample_parts = body_parts.first(3)
+        respond "[CreatureBar] Loaded config for family '#{family}':"
+        respond "  - Config file: #{config_path}"
+        respond "  - Global scale: #{config['scale']}"
+        respond "  - Panel dimensions: #{config['panel_width']}x#{config['panel_height']}"
+        respond "  - Marker size: #{config['marker_size']}"
+        respond "  - Body parts: #{body_parts.keys.size}"
+        sample_parts.each { |part, coords| respond "    - #{part}: #{coords.inspect}" }
+      end
+
+      @@silhouette_configs[family] = config
+      config
     end
 
     # Clear cached configs (useful for reloading after calibration)
@@ -523,9 +555,8 @@ module CreatureBar
       return nil unless File.exist?(silhouette_path)
 
       begin
-        # Load config to get scale
-        config = load_silhouette_config(family)
-        scale = config['scale'] || 0.8
+        # Use GLOBAL scale for pixbuf scaling
+        scale = @@config['global_scale'] || 1.0
 
         # Load and scale pixbuf
         pixbuf = GdkPixbuf::Pixbuf.new(file: silhouette_path)
@@ -822,9 +853,11 @@ module CreatureBar
         begin
           pixbuf = GdkPixbuf::Pixbuf.new(file: rank_file)
 
-          # Use provided marker_size (per-family) or fall back to global config
-          size = marker_size || @@config.dig('wound_markers', 'size') || 12
-          pixbuf = pixbuf.scale_simple(size, size, GdkPixbuf::InterpType::BILINEAR)
+          # Scale marker size proportionally with global_scale
+          base_size = marker_size || @@config['marker_size'] || 12
+          global_scale = @@config['global_scale'] || 1.0
+          scaled_size = (base_size * global_scale).round
+          pixbuf = pixbuf.scale_simple(scaled_size, scaled_size, GdkPixbuf::InterpType::BILINEAR)
 
           Gtk::Image.new(pixbuf: pixbuf)
         rescue => e
@@ -984,6 +1017,12 @@ module CreatureBar
           @@config['layout']['max_rows'] = widgets[:max_rows].text.to_i
           @@config['multi_creature']['max_shown'] = widgets[:max_shown].text.to_i
 
+          # Apply global scale setting
+          new_scale = widgets[:global_scale].text.to_f.clamp(0.2, 2.0)
+          old_scale = @@config['global_scale']
+          scale_changed = (old_scale != new_scale)
+          @@config['global_scale'] = new_scale
+
           # Apply behavior settings
           old_interval = @@config['update_interval']
           @@config['update_interval'] = widgets[:update_interval].text.to_i
@@ -994,12 +1033,18 @@ module CreatureBar
 
           save_config
 
-          # Determine whether we need a full window recreate (for transparency/decorations/OK)
+          # Determine whether we need a full window recreate (for transparency/decorations/scale/OK)
           transparency_changed = original_transparent != @@config['window']['transparent']
           decorations_changed = original_decorated != @@config['window']['decorated']
           interval_changed = old_interval != @@config['update_interval']
-          needs_recreate = (response == Gtk::ResponseType::OK) || transparency_changed || decorations_changed
+          needs_recreate = (response == Gtk::ResponseType::OK) || transparency_changed || decorations_changed || scale_changed
           pending_recreate ||= needs_recreate
+
+          # Clear caches if scale changed (forces reload of all pixbufs and configs)
+          if scale_changed
+            @@pixbuf_cache.clear
+            @@silhouette_configs.clear
+          end
 
           # Refresh CSS for color/background changes
           apply_css unless needs_recreate
@@ -1091,6 +1136,20 @@ module CreatureBar
       widgets[:max_shown].width_chars = 5
       shown_row.pack_start(widgets[:max_shown], expand: true, fill: true, padding: 0)
       box.pack_start(shown_row, expand: false, fill: false, padding: 5)
+
+      # Global Scale
+      scale_row = Gtk::Box.new(:horizontal, 10)
+      scale_label = Gtk::Label.new('Global Scale:')
+      scale_label.set_size_request(150, -1)
+      scale_label.halign = :start
+      scale_label.set_tooltip_text('Scale all silhouettes (0.2 to 2.0)')
+      scale_row.pack_start(scale_label, expand: false, fill: false, padding: 0)
+
+      widgets[:global_scale] = Gtk::Entry.new
+      widgets[:global_scale].text = (@@config['global_scale'] || 1.0).to_s
+      widgets[:global_scale].width_chars = 5
+      scale_row.pack_start(widgets[:global_scale], expand: true, fill: true, padding: 0)
+      box.pack_start(scale_row, expand: false, fill: false, padding: 5)
 
       box
     end
