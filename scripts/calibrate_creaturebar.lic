@@ -46,6 +46,7 @@ module CreatureBarCalibrate
   @@wound_marker = nil
   @@info_label = nil
   @@save_button = nil
+  @@copy_to_all_button = nil
   @@next_button = nil
   @@prev_button = nil
   @@rank_selector = nil
@@ -183,6 +184,75 @@ module CreatureBarCalibrate
       if show_popup
         show_message("Error saving: #{e.message}")
       end
+    end
+
+    def copy_settings_to_all_creatures
+      # Confirm action with user
+      dialog = Gtk::MessageDialog.new(
+        parent: @@window,
+        flags: :destroy_with_parent,
+        type: :question,
+        buttons: :yes_no,
+        message: "Copy current UI settings to ALL creature configs?\n\n" \
+                 "This will update: scale, marker_size, panel dimensions, name/HP/status settings\n" \
+                 "Body part coordinates will NOT be affected."
+      )
+
+      response = dialog.run
+      dialog.destroy
+      return unless response == Gtk::ResponseType::YES
+
+      # Apply all current UI values before copying
+      apply_scale
+      apply_panel_width
+      apply_panel_height if @@panel_height_entry
+      apply_marker_size
+      apply_name_settings
+      apply_hp_settings
+      apply_status_settings
+
+      # Extract current settings (everything except body_parts)
+      settings_to_copy = {
+        'scale' => @@config['scale'],
+        'marker_size' => @@config['marker_size'],
+        'panel_width' => @@config['panel_width'],
+        'panel_height' => @@config['panel_height'],
+        'name_display' => @@config['name_display'],
+        'hp_bar' => @@config['hp_bar'],
+        'status' => @@config['status']
+      }
+
+      updated_count = 0
+      error_count = 0
+
+      # Iterate through all creature YAML files
+      Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |yaml_file|
+        begin
+          # Load existing config
+          existing_config = File.exist?(yaml_file) ? YAML.load_file(yaml_file) : {}
+
+          # Preserve body_parts, update everything else
+          updated_config = settings_to_copy.merge({
+            'body_parts' => existing_config['body_parts'] || {}
+          })
+
+          # Save updated config
+          File.write(yaml_file, updated_config.to_yaml)
+          updated_count += 1
+        rescue => e
+          puts "Error updating #{File.basename(yaml_file)}: #{e.message}"
+          error_count += 1
+        end
+      end
+
+      # Show success message
+      message = "UI settings copied to #{updated_count} creature config(s)!\n\n" \
+                "Settings synced: scale, marker_size, panel dimensions, name/HP/status\n" \
+                "Body part coordinates preserved."
+      message += "\n\n#{error_count} error(s) occurred." if error_count > 0
+      show_message(message)
+    rescue => e
+      show_message("Error during bulk sync: #{e.message}")
     end
 
     def create_window
@@ -590,6 +660,14 @@ module CreatureBarCalibrate
       end
       nav_box.pack_start(@@save_button, expand: true, fill: true, padding: 0)
       @@main_box.pack_start(nav_box, expand: false, fill: false, padding: 2)
+
+      # Copy UI Settings to All button
+      copy_box = Gtk::Box.new(:horizontal, 5)
+      @@copy_to_all_button = Gtk::Button.new(label: 'Copy UI Settings to All Creatures')
+      @@copy_to_all_button.set_tooltip_text('Copy scale, marker size, panel dimensions, and display settings to all creature configs (preserves body_parts)')
+      @@copy_to_all_button.signal_connect('clicked') { copy_settings_to_all_creatures }
+      copy_box.pack_start(@@copy_to_all_button, expand: true, fill: true, padding: 0)
+      @@main_box.pack_start(copy_box, expand: false, fill: false, padding: 2)
 
       # Panel preview
       @@panel_preview_container = create_panel_preview
