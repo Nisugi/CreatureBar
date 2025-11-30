@@ -133,6 +133,363 @@ module CreatureBar
   # Silhouette config directory
   SILHOUETTE_CONFIG_DIR = File.join(CONFIG_DIR, 'silhouette_configs')
 
+  # Asset Manager for Jinx distribution
+  module AssetManager
+    JINX_REPO_NAME = :creaturebar
+    JINX_REPO_URL = "https://raw.githubusercontent.com/Nisugi/CreatureBar/main"
+
+    # Available asset packages
+    PACKAGES = {
+      'default' => {
+        name: 'Default Only',
+        description: 'Base humanoid silhouette + wound markers',
+        size: '~50KB'
+      },
+      'hinterwilds' => {
+        name: 'Hinterwilds Pack',
+        description: '21 Hinterwilds creatures',
+        size: '~500KB'
+      }
+    }
+
+    class << self
+      def silhouettes_installed?
+        return false unless Dir.exist?(SILHOUETTE_DIR)
+
+        # Check for minimum required files
+        required_files = %w[default.png rank1.png rank2.png rank3.png]
+        required_files.all? { |f| File.exist?(File.join(SILHOUETTE_DIR, f)) }
+      end
+
+      def configs_installed?
+        return false unless Dir.exist?(SILHOUETTE_CONFIG_DIR)
+
+        # Check for default config
+        File.exist?(File.join(SILHOUETTE_CONFIG_DIR, 'default.yaml'))
+      end
+
+      def assets_installed?
+        silhouettes_installed? && configs_installed?
+      end
+
+      def ensure_directories
+        FileUtils.mkdir_p(CONFIG_DIR) unless Dir.exist?(CONFIG_DIR)
+        FileUtils.mkdir_p(SILHOUETTE_DIR) unless Dir.exist?(SILHOUETTE_DIR)
+        FileUtils.mkdir_p(SILHOUETTE_CONFIG_DIR) unless Dir.exist?(SILHOUETTE_CONFIG_DIR)
+      end
+
+      def ensure_jinx_available
+        unless defined?(Jinx)
+          respond ""
+          respond "[CreatureBar] Jinx package manager is required."
+          respond "Install Jinx first with: ;repository download jinx"
+          respond ""
+          return false
+        end
+        true
+      end
+
+      def ensure_repo_registered(skip_prompt: false)
+        return true if Jinx::Repo.exists?(JINX_REPO_NAME)
+
+        unless skip_prompt
+          respond ""
+          respond "CreatureBar needs to register its asset repository with Jinx:"
+          respond "  Name: #{JINX_REPO_NAME}"
+          respond "  URL:  #{JINX_REPO_URL}"
+          respond ""
+          respond "Register this repository? (y/n)"
+
+          toggle_upstream
+          input = nil
+          while input.nil? || input.empty?
+            line = upstream_get
+            input = line.gsub('<c>', '').strip if line
+          end
+          toggle_upstream
+
+          unless input =~ /^y/i
+            respond "Repository registration cancelled."
+            return false
+          end
+        end
+
+        respond "Registering CreatureBar asset repository..."
+        Jinx::Repo.create(name: JINX_REPO_NAME, url: JINX_REPO_URL)
+        true
+      rescue => e
+        respond "[CreatureBar] Failed to register repo: #{e.message}"
+        false
+      end
+
+      def get_repo
+        repo = Jinx::Repo.lookup(JINX_REPO_NAME)
+        Jinx::Repo.manifest(repo)  # Fetches/updates available assets
+        repo
+      end
+
+      def prompt_download
+        respond ""
+        respond "==========================================================="
+        respond " CreatureBar - First Run Setup"
+        respond "==========================================================="
+        respond ""
+        respond "CreatureBar needs to download silhouette assets via Jinx."
+        respond ""
+        respond "Choose a pack to install:"
+        respond ""
+        respond "  [1] Default Only (1 creature - ~50KB)"
+        respond "  [2] Hinterwilds (21 creatures - ~500KB)"
+        respond "  [3] All Packs (~550KB)"
+        respond ""
+        respond "Enter choice (1-3), or 'cancel' to exit:"
+
+        toggle_upstream
+
+        input = nil
+        while input.nil? || input.empty?
+          line = upstream_get
+          input = line.gsub('<c>', '').strip if line
+        end
+        toggle_upstream
+
+        case input
+        when '1'
+          download_package('default')
+        when '2'
+          download_package('default')  # Always need default
+          download_package('hinterwilds')
+        when '3'
+          download_all_packages
+        when /cancel/i
+          respond "Setup cancelled. Run ;creaturebar again when ready."
+          return false
+        else
+          respond "Invalid choice. Please run ;creaturebar again."
+          return false
+        end
+
+        true
+      end
+
+      def download_all_packages
+        PACKAGES.keys.each { |pkg| download_package(pkg) }
+      end
+
+      def download_package(package_name)
+        package = PACKAGES[package_name]
+        unless package
+          respond "[CreatureBar] Unknown package: #{package_name}"
+          return false
+        end
+
+        respond ""
+        respond "Downloading #{package[:name]} via Jinx..."
+
+        ensure_directories
+
+        begin
+          repo = get_repo
+        rescue => e
+          respond "[CreatureBar] Failed to fetch repository: #{e.message}"
+          return false
+        end
+
+        # Filter assets for this package
+        package_assets = repo[:available].select { |a| a[:package] == "creaturebar-#{package_name}" }
+
+        if package_assets.empty?
+          respond "[CreatureBar] No assets found for package: #{package_name}"
+          return false
+        end
+
+        success_count = 0
+        package_assets.each do |asset|
+          if download_asset(repo, asset)
+            success_count += 1
+          end
+        end
+
+        respond "Downloaded #{success_count}/#{package_assets.size} files for #{package[:name]}"
+        success_count == package_assets.size
+      end
+
+      def download_asset(repo, asset)
+        remote_path = asset[:file]
+        filename = File.basename(remote_path)
+
+        # Determine target directory based on asset path
+        if remote_path.include?('/silhouettes/')
+          target_dir = SILHOUETTE_DIR
+        elsif remote_path.include?('/silhouette_configs/')
+          target_dir = SILHOUETTE_CONFIG_DIR
+        else
+          respond "[CreatureBar] Unknown asset type: #{remote_path}"
+          return false
+        end
+
+        # Use Jinx's installer with our custom target directory
+        Jinx::LichInstaller.install(
+          filename,
+          [repo],
+          target_dir,
+          filename,
+          overwrite: false,
+          force: false,
+          asset_type: "data"
+        )
+        true
+      rescue Jinx::Error => e
+        respond "[CreatureBar] #{e.message}"
+        false
+      end
+
+      def check_for_updates
+        respond "Checking for CreatureBar asset updates via Jinx..."
+
+        begin
+          repo = get_repo
+        rescue => e
+          respond "[CreatureBar] Failed to fetch repository: #{e.message}"
+          return
+        end
+
+        updates = []
+
+        # Check each file in manifest against local files
+        repo[:available].each do |asset|
+          remote_path = asset[:file]
+          remote_digest = asset[:md5]
+
+          # Determine local path
+          if remote_path.include?('/silhouettes/')
+            filename = File.basename(remote_path)
+            local_path = File.join(SILHOUETTE_DIR, filename)
+          elsif remote_path.include?('/silhouette_configs/')
+            filename = File.basename(remote_path)
+            local_path = File.join(SILHOUETTE_CONFIG_DIR, filename)
+          else
+            next
+          end
+
+          # Skip if file doesn't exist locally (not installed)
+          next unless File.exist?(local_path)
+
+          # Compare digests
+          if needs_update?(local_path, remote_digest)
+            updates << { local: local_path, asset: asset, filename: filename, repo: repo }
+          end
+        end
+
+        if updates.empty?
+          respond "All installed assets are up to date!"
+          return
+        end
+
+        respond ""
+        respond "#{updates.size} update(s) available:"
+        updates.first(10).each { |u| respond "  - #{u[:filename]}" }
+        respond "  ... and #{updates.size - 10} more" if updates.size > 10
+        respond ""
+        respond "Download updates? (y/n)"
+
+        toggle_upstream
+        input = nil
+        while input.nil? || input.empty?
+          line = upstream_get
+          input = line.gsub('<c>', '').strip if line
+        end
+        toggle_upstream
+
+        if input =~ /^y/i
+          success = 0
+          updates.each do |update|
+            if download_asset(update[:repo], update[:asset])
+              success += 1
+            end
+          end
+          respond ""
+          respond "Updated #{success}/#{updates.size} files."
+
+          # Clear caches so changes take effect
+          CreatureBar.clear_silhouette_config_cache if success > 0
+        else
+          respond "Update cancelled."
+        end
+      end
+
+      def needs_update?(local_path, remote_digest)
+        return true unless File.exist?(local_path)
+
+        require 'digest'
+
+        local_digest = Digest::SHA1.new
+        File.open(local_path, 'rb') do |f|
+          while chunk = f.read(8192)
+            local_digest.update(chunk)
+          end
+        end
+
+        local_digest.base64digest != remote_digest
+      end
+
+      def clear_assets
+        respond ""
+        respond "This will back up and delete all CreatureBar silhouette assets and configs."
+        respond "You will be prompted to re-download them."
+        respond ""
+        respond "Are you sure? (y/n)"
+
+        toggle_upstream
+        input = nil
+        while input.nil? || input.empty?
+          line = upstream_get
+          input = line.gsub('<c>', '').strip if line
+        end
+        toggle_upstream
+
+        unless input =~ /^y/i
+          respond "Reset cancelled."
+          return false
+        end
+
+        # Create backup directory with timestamp
+        timestamp = Time.now.strftime('%Y%m%d_%H%M%S')
+        backup_dir = File.join(CONFIG_DIR, "backup_#{timestamp}")
+        FileUtils.mkdir_p(backup_dir)
+
+        # Backup and delete silhouettes
+        if Dir.exist?(SILHOUETTE_DIR)
+          silhouette_backup = File.join(backup_dir, 'silhouettes')
+          FileUtils.mkdir_p(silhouette_backup)
+
+          Dir.glob(File.join(SILHOUETTE_DIR, '*.png')).each do |f|
+            FileUtils.cp(f, silhouette_backup) rescue nil
+            File.delete(f) rescue nil
+          end
+          respond "Backed up and cleared silhouettes."
+        end
+
+        # Backup and delete configs
+        if Dir.exist?(SILHOUETTE_CONFIG_DIR)
+          config_backup = File.join(backup_dir, 'silhouette_configs')
+          FileUtils.mkdir_p(config_backup)
+
+          Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |f|
+            FileUtils.cp(f, config_backup) rescue nil
+            File.delete(f) rescue nil
+          end
+          respond "Backed up and cleared silhouette configs."
+        end
+
+        respond ""
+        respond "Backup saved to: #{backup_dir}"
+        respond ""
+        true
+      end
+    end
+  end
+
   class << self
     # -- Configuration & persistence ----------------------------------------------------------
     def load_config
@@ -2162,6 +2519,55 @@ if Script.current.name.downcase == 'creaturebar'
   unless defined?(Creature)
     echo "Error: Creature module not found. Make sure creature.rb is loaded."
     exit
+  end
+
+  # Handle update command (no GTK needed)
+  if script.vars[1] =~ /^update$/i
+    CreatureBar::AssetManager.ensure_jinx_available or exit
+    CreatureBar::AssetManager.ensure_repo_registered or exit
+    CreatureBar::AssetManager.check_for_updates
+    exit
+  end
+
+  # Handle download command (force re-download)
+  if script.vars[1] =~ /^download$/i
+    CreatureBar::AssetManager.ensure_jinx_available or exit
+    CreatureBar::AssetManager.ensure_repo_registered or exit
+    CreatureBar::AssetManager.prompt_download
+    exit
+  end
+
+  # Handle reset command (clear assets and re-run first-time setup)
+  if script.vars[1] =~ /^reset$/i
+    CreatureBar::AssetManager.clear_assets or exit
+
+    # Re-run first-time setup
+    CreatureBar::AssetManager.ensure_jinx_available or exit
+    CreatureBar::AssetManager.ensure_repo_registered or exit
+    CreatureBar::AssetManager.prompt_download or exit
+
+    respond "Reset complete! Starting CreatureBar..."
+    respond ""
+  end
+
+  # Check if assets are installed (first-run detection)
+  unless CreatureBar::AssetManager.assets_installed?
+    respond "[CreatureBar] Silhouette assets not found."
+
+    # Ensure Jinx is available
+    CreatureBar::AssetManager.ensure_jinx_available or exit
+
+    # Register the CreatureBar repo with Jinx
+    CreatureBar::AssetManager.ensure_repo_registered or exit
+
+    # Prompt user to download assets via Jinx
+    success = CreatureBar::AssetManager.prompt_download
+    unless success
+      exit
+    end
+    respond ""
+    respond "Assets downloaded successfully! Starting CreatureBar..."
+    respond ""
   end
 
   # Ensure cleanup on script termination
