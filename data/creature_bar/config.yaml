@@ -1,0 +1,72 @@
+---
+position:
+  x: 100
+  "y": 100
+window:
+  width: 200
+  height: 230
+  decorated: true
+  always_on_top: true
+  transparent: false
+  hide_when_no_target: false
+  max_height: 800
+update_interval: 250
+multi_creature:
+  enabled: true
+  max_shown: 5
+  show_current_target_icon: true
+  panel_width: 135
+layout:
+  mode: horizontal
+colors:
+  window_background: rgba(46, 46, 46, 0.95)
+  window_background_light: rgba(255, 255, 255, 0.95)
+  name_font: "#FFFFFF"
+  name_background: rgba(0, 0, 0, 0)
+  current_target_border: "#FFD700"
+  other_target_border: "#555555"
+  hp_background: rgba(60, 20, 20, 0.9)
+  hp_high: "#2E7D32"
+  hp_mid: "#FFB000"
+  hp_low: "#FF4444"
+  hp_text: "#FFFFFF"
+  wound_1: "#FF9800"
+  wound_2: "#FF5722"
+  wound_3: "#B71C1C"
+  status_stunned: "#FFD700"
+  status_immobilized: "#FF69B4"
+  status_webbed: "#C0C0C0"
+  status_prone: "#FFA500"
+  status_blind: "#8B4513"
+  status_sunburst: "#FFFF00"
+  status_sleeping: "#9370DB"
+  status_poisoned: "#32CD32"
+  status_dead: "#000000"
+  status_bleeding: "#DC143C"
+hp_bar:
+  height: 16
+  width: 120
+  show_text: true
+  show_percentage: true
+  text_style: overlay
+  ranges:
+    low:
+      min: 0
+      max: 33
+    mid:
+      min: 34
+      max: 66
+    high:
+      min: 67
+      max: 100
+wound_markers:
+  opacity: 0.9
+status:
+  show: true
+  font_size: 12
+name_display:
+  show: true
+  font_size: 12
+  font_family: ''
+  font_weight: bold
+  max_length: 30
