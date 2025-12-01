@@ -5,20 +5,17 @@
 
   Usage: ;CreatureBarCalibrate
 
-  Instructions:
-  1. Click on the silhouette where you want to place each body part wound marker
-  2. Use arrow keys or click Next to cycle through body parts
-  3. Press 'S' or click Save to save coordinates to config
-  4. Test with different wound ranks using number keys 1-3
+        author: Elanthia Online
+  contributors: Nisugi
+          game: Gemstone
+          tags: hunting, combat, creatures
+       version: 1.0
+      required: Lich >= 5.13.0
 
-  Keyboard Shortcuts:
-  - Left/Right Arrow: Previous/Next body part
-  - 1/2/3: Show Rank 1/2/3 wound marker
-  - S: Save coordinates
-  - Q: Quit
 
   Author: Coordinate calibration helper
-  Version: 1.0.0
+  v1.0 (2025/11/30)
+    - initial release
 =end
 
 require 'gtk3'
