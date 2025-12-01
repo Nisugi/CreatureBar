@@ -84,6 +84,7 @@ module CreatureBarCalibrate
   @@main_box = nil  # Main window box
   # Layout size now comes from panel_width/panel_height in config (no longer hardcoded)
   @@loading_config = false  # Flag to prevent signal handlers from firing during config load
+  @@panel_size_feedback_label = nil  # Shows actual vs configured panel size
 
   class << self
     def get_available_silhouettes
@@ -381,6 +382,11 @@ module CreatureBarCalibrate
           background-color: #2e2e2e;
           background-image: none;
         }
+        label#status_label {
+          padding: 0px;
+          margin: 0px;
+          font-weight: bold;
+        }
         frame#creature_panel {
           border: 2px solid #{other_border};
           border-radius: 3px;
@@ -475,6 +481,11 @@ module CreatureBarCalibrate
       ph_box.pack_start(@@panel_height_entry, expand: false, fill: false, padding: 2)
       sil_tab.pack_start(ph_box, expand: false, fill: false, padding: 5)
 
+      # Panel size feedback - shows actual content size vs configured
+      @@panel_size_feedback_label = Gtk::Label.new
+      @@panel_size_feedback_label.set_markup("<small><i>Content size: calculating...</i></small>")
+      sil_tab.pack_start(@@panel_size_feedback_label, expand: false, fill: false, padding: 2)
+
       notebook.append_page(sil_tab, Gtk::Label.new('Silhouette'))
 
       # Tab 2: Name Display Settings
@@ -555,6 +566,15 @@ module CreatureBarCalibrate
       @@hp_show_text_check.active = @@config.dig('hp_bar', 'show_text')
       @@hp_show_text_check.signal_connect('toggled') { apply_hp_settings }
       style_row.pack_start(@@hp_show_text_check, expand: false, fill: false, padding: 10)
+      # Text position (only for overlay mode)
+      style_row.pack_start(Gtk::Label.new('Pos:'), expand: false, fill: false, padding: 2)
+      @@hp_text_position_combo = Gtk::ComboBoxText.new
+      @@hp_text_position_combo.append_text('Top')
+      @@hp_text_position_combo.append_text('Bottom')
+      text_pos = @@config.dig('hp_bar', 'text_position') || 'top'
+      @@hp_text_position_combo.active = (text_pos == 'bottom' ? 1 : 0)
+      @@hp_text_position_combo.signal_connect('changed') { apply_hp_settings }
+      style_row.pack_start(@@hp_text_position_combo, expand: false, fill: false, padding: 2)
       hp_tab.pack_start(style_row, expand: false, fill: false, padding: 5)
 
       # Row: Text format checkboxes
@@ -599,7 +619,7 @@ module CreatureBarCalibrate
       hp_tab.pack_start(dims_row, expand: false, fill: false, padding: 5)
 
       hp_note = Gtk::Label.new
-      hp_note.set_markup("<small><i>Note: Height only for embedded mode.\nOverlay mode uses fixed 8px height.</i></small>")
+      hp_note.set_markup("<small><i>Default height: 8px overlay, 25px embedded</i></small>")
       hp_tab.pack_start(hp_note, expand: false, fill: false, padding: 5)
 
       notebook.append_page(hp_tab, Gtk::Label.new('HP Bar'))
@@ -680,7 +700,25 @@ module CreatureBarCalibrate
 
       @@window.add(@@main_box)
       @@window.signal_connect('key-press-event') { |widget, event| handle_key_press(event) }
+
+      # Track window position changes and save to config
+      @@window.signal_connect('configure-event') do |widget, event|
+        # Only save if window is visible and position has actually changed
+        if @@window.visible?
+          @@main_config['calibrator'] ||= {}
+          @@main_config['calibrator']['window_x'] = event.x
+          @@main_config['calibrator']['window_y'] = event.y
+          save_main_config
+        end
+        false
+      end
+
       @@window.show_all
+
+      # Restore saved window position after showing
+      if @@main_config.dig('calibrator', 'window_x') && @@main_config.dig('calibrator', 'window_y')
+        @@window.move(@@main_config['calibrator']['window_x'], @@main_config['calibrator']['window_y'])
+      end
     end
 
     def current_part_name
@@ -727,7 +765,7 @@ module CreatureBarCalibrate
 
       panel_box = Gtk::Box.new(:vertical, 0)
       panel_box.set_margin_top(2)
-      panel_box.set_margin_bottom(2)
+      panel_box.set_margin_bottom(1)
       panel_box.set_margin_left(4)
       panel_box.set_margin_right(4)
 
@@ -804,8 +842,10 @@ module CreatureBarCalibrate
       if @@config.dig('hp_bar', 'show') != false
         text_style = @@config.dig('hp_bar', 'text_style') || 'overlay'
         show_bar_graphic = @@config.dig('hp_bar', 'show_bar') != false
+        text_position = @@config.dig('hp_bar', 'text_position') || 'top'
 
-        # HP label for overlay mode (or text-only when bar is hidden) - PACK FIRST so it appears ABOVE bar
+        # Create HP label for overlay mode
+        hp_label = nil
         if text_style == 'overlay' && @@config.dig('hp_bar', 'show_text')
           hp_label = Gtk::Label.new
           hp_label.name = 'hp_label'
@@ -814,14 +854,15 @@ module CreatureBarCalibrate
           font_size = (@@config.dig('hp_bar', 'font_size') || 11) * 1024
           hp_text = build_hp_text(350, 350, 100, @@config.dig('hp_bar'))
           hp_label.set_markup("<span color='#{hp_text_color}' size='#{font_size}'>#{hp_text}</span>")
-          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0)
         end
 
-        # HP bar graphic (only if show_bar is true) - PACK SECOND so it appears BELOW overlay text
-        hp_bar = nil
+        # Create HP bar graphic (only if show_bar is true)
+        hp_container = nil
         if show_bar_graphic
           hp_bar_width = @@config.dig('hp_bar', 'width') || 120
-          hp_bar_height = text_style == 'embedded' ? (@@config.dig('hp_bar', 'height') || 25) : 8
+          # Use configured height for both modes (different defaults)
+          default_height = text_style == 'embedded' ? 25 : 8
+          hp_bar_height = @@config.dig('hp_bar', 'height') || default_height
 
           hp_bar = Gtk::DrawingArea.new
           hp_bar.set_size_request(hp_bar_width, hp_bar_height)
@@ -865,7 +906,17 @@ module CreatureBarCalibrate
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
           hp_container.pack_start(hp_bar, expand: false, fill: false, padding: 0)
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
-          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 1)
+        end
+
+        # Pack HP elements based on text_position setting (only affects overlay mode)
+        if text_position == 'bottom'
+          # Bar first, then text below
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+        else
+          # Text first (top), then bar below (default)
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
         end
       end
 
@@ -1014,8 +1065,14 @@ module CreatureBarCalibrate
         # Update entry to show clamped value
         @@scale_entry.text = new_scale.round(1).to_s
 
+        # Auto-calculate marker size based on scale (14px at scale 1.0)
+        new_marker_size = (14 * new_scale).round.clamp(2, 30)
+        @@config['marker_size'] = new_marker_size
+        @@marker_size_entry.text = new_marker_size.to_s
+
         Gtk.queue do
           reload_silhouette
+          update_wound_marker
         end
       rescue => e
       end
@@ -1026,7 +1083,7 @@ module CreatureBarCalibrate
 
       begin
         new_width = @@panel_width_entry.text.to_i
-        new_width = [[new_width, 50].max, 300].min  # Clamp between 50 and 300
+        new_width = [[new_width, 20].max, 300].min  # Clamp between 20 and 300
 
         @@config['panel_width'] = new_width
         @@panel_width_entry.text = new_width.to_s
@@ -1036,6 +1093,8 @@ module CreatureBarCalibrate
           panel_height = @@config['panel_height'] || 220
           @@panel_frame.set_size_request(new_width, panel_height)
         end
+
+        update_panel_size_feedback
       rescue => e
       end
     end
@@ -1045,7 +1104,7 @@ module CreatureBarCalibrate
 
       begin
         new_height = @@panel_height_entry.text.to_i
-        new_height = [[new_height, 50].max, 400].min  # Clamp between 50 and 400
+        new_height = [[new_height, 20].max, 400].min  # Clamp between 20 and 400
 
         @@config['panel_height'] = new_height
         @@panel_height_entry.text = new_height.to_s
@@ -1055,6 +1114,8 @@ module CreatureBarCalibrate
           panel_width = @@config['panel_width'] || 100
           @@panel_frame.set_size_request(panel_width, new_height)
         end
+
+        update_panel_size_feedback
       rescue => e
       end
     end
@@ -1064,7 +1125,7 @@ module CreatureBarCalibrate
 
       begin
         new_size = @@marker_size_entry.text.to_i
-        new_size = [[new_size, 6].max, 30].min  # Clamp between 6 and 30
+        new_size = [[new_size, 2].max, 30].min  # Clamp between 2 and 30
 
         @@config['marker_size'] = new_size
         @@marker_size_entry.text = new_size.to_s
@@ -1106,11 +1167,12 @@ module CreatureBarCalibrate
         @@config['hp_bar']['show_bar'] = @@hp_show_bar_check.active?
         @@config['hp_bar']['text_style'] = @@hp_text_style_combo.active == 1 ? 'embedded' : 'overlay'
         @@config['hp_bar']['show_text'] = @@hp_show_text_check.active?
+        @@config['hp_bar']['text_position'] = @@hp_text_position_combo.active == 1 ? 'bottom' : 'top'
         @@config['hp_bar']['show_hp_prefix'] = @@hp_show_hp_prefix_check.active?
         @@config['hp_bar']['show_numbers'] = @@hp_show_numbers_check.active?
         @@config['hp_bar']['show_percentage'] = @@hp_show_percentage_check.active?
-        @@config['hp_bar']['width'] = @@hp_width_entry.text.to_i.clamp(50, 200)
-        @@config['hp_bar']['height'] = @@hp_height_entry.text.to_i.clamp(8, 40)
+        @@config['hp_bar']['width'] = @@hp_width_entry.text.to_i.clamp(20, 200)
+        @@config['hp_bar']['height'] = @@hp_height_entry.text.to_i.clamp(4, 40)
         @@config['hp_bar']['font_size'] = @@hp_font_size_entry.text.to_i.clamp(6, 20)
 
         # Update entries to show clamped values
@@ -1147,6 +1209,71 @@ module CreatureBarCalibrate
       end
     end
 
+    def update_panel_size_feedback
+      return unless @@panel_size_feedback_label && !@@panel_size_feedback_label.destroyed?
+      return unless @@config
+
+      # Calculate actual content size based on current settings
+      scale = @@config['scale'] || 0.8
+
+      # Get silhouette dimensions
+      silhouette_width = 0
+      silhouette_height = 0
+      if @@silhouette_pixbuf
+        silhouette_width = (@@silhouette_pixbuf.width * scale).to_i
+        silhouette_height = (@@silhouette_pixbuf.height * scale).to_i
+      end
+
+      # Estimate other element heights (font_size * ~1.4 for line height + padding)
+      name_height = @@config.dig('name_display', 'show') ? ((@@config.dig('name_display', 'font_size') || 12) * 1.4).to_i + 2 : 0
+
+      hp_height = 0
+      if @@config.dig('hp_bar', 'show') != false
+        text_style = @@config.dig('hp_bar', 'text_style') || 'overlay'
+        if text_style == 'overlay' && @@config.dig('hp_bar', 'show_text')
+          hp_height += ((@@config.dig('hp_bar', 'font_size') || 11) * 1.4).to_i + 1
+        end
+        if @@config.dig('hp_bar', 'show_bar') != false
+          default_height = text_style == 'embedded' ? 25 : 8
+          hp_height += @@config.dig('hp_bar', 'height') || default_height
+        end
+      end
+
+      status_height = @@config.dig('status', 'show') ? ((@@config.dig('status', 'font_size') || 12) * 1.4).to_i + 2 : 0
+
+      # Calculate total content size
+      # panel_box margins: left=4, right=4, top=2, bottom=1
+      # frame border: 2px each side + GTK internal spacing
+      horizontal_padding = 4 + 4 + 2 + 2 + 2  # margins + border + frame padding = 14
+      vertical_padding = 2 + 1 + 2 + 2 + 7    # margins + border + GTK spacing = 14
+
+      content_width = [silhouette_width, @@config.dig('hp_bar', 'width') || 0].max + horizontal_padding
+      content_height = name_height + silhouette_height + hp_height + status_height + vertical_padding
+
+      # Get configured size
+      configured_width = @@config['panel_width'] || 100
+      configured_height = @@config['panel_height'] || 220
+
+      # Build feedback message
+      width_ok = content_width <= configured_width
+      height_ok = content_height <= configured_height
+
+      if width_ok && height_ok
+        markup = "<small><span color='#88cc88'>Content fits: #{content_width}x#{content_height}px</span></small>"
+      else
+        warnings = []
+        warnings << "W:#{content_width}" unless width_ok
+        warnings << "H:#{content_height}" unless height_ok
+        markup = "<small><span color='#ffaa44'>Content needs: #{content_width}x#{content_height}px</span></small>"
+      end
+
+      Gtk.queue do
+        @@panel_size_feedback_label.set_markup(markup) if @@panel_size_feedback_label && !@@panel_size_feedback_label.destroyed?
+      end
+    rescue => e
+      # Silently fail
+    end
+
     def rebuild_preview
       # Completely recreate the panel preview with new settings
       # This is called when name/hp/status settings change
@@ -1173,6 +1300,9 @@ module CreatureBarCalibrate
         @@main_box.reorder_child(@@panel_preview_container, instructions_index)
 
         @@panel_preview_container.show_all
+
+        # Update size feedback after rebuild
+        update_panel_size_feedback
       end
     end
 
@@ -1197,6 +1327,8 @@ module CreatureBarCalibrate
         @@hp_show_bar_check.active = @@config['hp_bar']['show_bar'] != false
         @@hp_text_style_combo.active = (@@config['hp_bar']['text_style'] == 'embedded' ? 1 : 0)
         @@hp_show_text_check.active = @@config['hp_bar']['show_text'] != false
+        text_pos = @@config['hp_bar']['text_position'] || 'top'
+        @@hp_text_position_combo.active = (text_pos == 'bottom' ? 1 : 0)
         @@hp_show_hp_prefix_check.active = @@config['hp_bar']['show_hp_prefix'] != false
         @@hp_show_numbers_check.active = @@config['hp_bar']['show_numbers'] != false
         @@hp_show_percentage_check.active = @@config['hp_bar']['show_percentage'] != false
@@ -1304,6 +1436,9 @@ module CreatureBarCalibrate
 
       # Update wound marker
       update_wound_marker
+
+      # Update size feedback
+      update_panel_size_feedback
     end
 
     def handle_key_press(event)

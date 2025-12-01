@@ -593,7 +593,7 @@ module CreatureBar
       @@save_timer.kill if @@save_timer
       @@save_timer = Thread.new do
         sleep 1
-        save_config
+        save_window_settings  # Capture current position/size before saving
         @@save_timer = nil
       end
     end
@@ -658,7 +658,8 @@ module CreatureBar
         }
         #status_label {
           font-weight: bold;
-          padding: 5px;
+          padding: 0px;
+          margin: 0px;
         }
         frame#creature_panel_frame {
           border: 2px solid #{colors['other_target_border']};
@@ -946,7 +947,7 @@ module CreatureBar
 
       panel_box = Gtk::Box.new(:vertical, 0)
       panel_box.set_margin_top(2)
-      panel_box.set_margin_bottom(2)
+      panel_box.set_margin_bottom(1)
       panel_box.set_margin_left(4)
       panel_box.set_margin_right(4)
 
@@ -1012,17 +1013,25 @@ module CreatureBar
         panel_widgets[:hp_color] = @@config['colors']['hp_high']
         panel_widgets[:hp_text] = ''
 
-        if hp_label
-          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0)
-        end
-
-        # Pack HP bar graphic (only if it exists)
+        # Create HP container if bar exists
+        hp_container = nil
         if hp_bar
           hp_container = Gtk::Box.new(:horizontal, 0)
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
           hp_container.pack_start(hp_bar, expand: false, fill: false, padding: 0)
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
-          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 1)
+        end
+
+        # Pack HP elements based on text_position setting (only affects overlay mode)
+        text_position = panel_widgets[:config]['hp_bar']['text_position'] || 'top'
+        if text_position == 'bottom'
+          # Bar first, then text below
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+        else
+          # Text first (top), then bar below (default)
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
         end
       end
 
@@ -1131,7 +1140,9 @@ module CreatureBar
       hp_bar = nil
       if show_bar_graphic
         hp_bar_width = config['hp_bar']['width'] || 100
-        hp_bar_height = text_style == 'embedded' ? (config['hp_bar']['height'] || 25) : 8
+        # Use configured height for both modes (different defaults)
+        default_height = text_style == 'embedded' ? 25 : 8
+        hp_bar_height = config['hp_bar']['height'] || default_height
 
         hp_bar = Gtk::DrawingArea.new
         hp_bar.set_size_request(hp_bar_width, hp_bar_height)
@@ -2519,6 +2530,33 @@ if Script.current.name.downcase == 'creaturebar'
   # Check if Creature module is available
   unless defined?(Creature)
     echo "Error: Creature module not found. Make sure creature.rb is loaded."
+    exit
+  end
+
+  # Handle help command
+  if script.vars[1] =~ /^help$/i
+    respond ""
+    respond "═══════════════════════════════════════════════════════════"
+    respond " CreatureBar - Visual creature tracking for GemStone IV"
+    respond "═══════════════════════════════════════════════════════════"
+    respond ""
+    respond " Usage: ;creaturebar [command]"
+    respond ""
+    respond " Commands:"
+    respond "   (none)     Start CreatureBar"
+    respond "   config     Start with settings dialog open"
+    respond "   download   Download/re-download asset packs"
+    respond "   update     Check for and install asset updates"
+    respond "   reset      Clear all assets and re-run setup"
+    respond "   help       Show this help message"
+    respond ""
+    respond " In-window:"
+    respond "   Right-click   Open context menu (settings, reload, close)"
+    respond "   Click panel   Target that creature"
+    respond ""
+    respond " Related:"
+    respond "   ;calibrate_creaturebar   Visual silhouette calibrator"
+    respond ""
     exit
   end
 
