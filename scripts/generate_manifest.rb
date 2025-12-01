@@ -19,6 +19,7 @@ OUTPUT_FILE = 'manifest.json'
 # Package definitions - maps directory names to package names
 PACKAGES = {
   'default' => 'creaturebar-default',
+  'atoll' => 'creaturebar-atoll',
   'hinterwilds' => 'creaturebar-hinterwilds'
 }
 
