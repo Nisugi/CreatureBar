@@ -37,50 +37,50 @@ status:
   font_size: 8
 body_parts:
   head:
-  - 36
-  - 0
+  - 39
+  - 30
   neck:
-  - 36
-  - 21
+  - 41
+  - 44
   chest:
-  - 38
-  - 36
+  - 41
+  - 58
   abdomen:
-  - 35
-  - 65
+  - 42
+  - 78
   back:
-  - -5
-  - 136
-  leftArm:
-  - 63
-  - 46
-  rightArm:
-  - 10
-  - 46
-  leftHand:
-  - 70
-  - 84
-  rightHand:
   - 1
-  - 81
+  - 133
+  leftArm:
+  - 53
+  - 68
+  rightArm:
+  - 21
+  - 65
+  leftHand:
+  - 59
+  - 94
+  rightHand:
+  - 18
+  - 95
   leftLeg:
-  - 56
-  - 110
+  - 52
+  - 118
   rightLeg:
-  - 19
-  - 111
+  - 27
+  - 117
   leftFoot:
-  - 60
-  - 145
+  - 53
+  - 146
   rightFoot:
-  - 11
-  - 145
+  - 22
+  - 147
   leftEye:
-  - 66
-  - -1
+  - 67
+  - 1
   rightEye:
   - 4
-  - 0
+  - 1
   nerves:
-  - 73
-  - 135
+  - 72
+  - 133

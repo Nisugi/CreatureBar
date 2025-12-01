@@ -5,20 +5,16 @@
 
   Usage: ;CreatureBarCalibrate
 
-  Instructions:
-  1. Click on the silhouette where you want to place each body part wound marker
-  2. Use arrow keys or click Next to cycle through body parts
-  3. Press 'S' or click Save to save coordinates to config
-  4. Test with different wound ranks using number keys 1-3
-
-  Keyboard Shortcuts:
-  - Left/Right Arrow: Previous/Next body part
-  - 1/2/3: Show Rank 1/2/3 wound marker
-  - S: Save coordinates
-  - Q: Quit
+        author: Elanthia Online
+  contributors: Nisugi
+          game: Gemstone
+          tags: hunting, combat, creatures
+       version: 1.0
+      required: Lich >= 5.13.0
 
   Author: Coordinate calibration helper
-  Version: 1.0.0
+  v1.0 (2025/11/30)
+    - initial release
 =end
 
 require 'gtk3'
@@ -46,21 +42,22 @@ module CreatureBarCalibrate
   @@wound_marker = nil
   @@info_label = nil
   @@save_button = nil
+  @@copy_to_all_button = nil
   @@next_button = nil
   @@prev_button = nil
   @@rank_selector = nil
   @@size_display = nil
   @@scale_display = nil
   @@family_combo = nil
-  @@panel_frame = nil  # Reference to panel preview frame for dynamic resizing
+  @@panel_frame = nil # Reference to panel preview frame for dynamic resizing
   @@running = false
 
   @@current_part_index = 0
-  @@current_rank = 1  # Default to rank 1 for preview
-  @@current_family = 'default'  # Default family
+  @@current_rank = 1 # Default to rank 1 for preview
+  @@current_family = 'default' # Default family
   @@coordinates = {}
-  @@config = nil  # Silhouette-specific config
-  @@main_config = nil  # Main config.yaml (HP bar, colors, fonts, etc)
+  @@config = nil # Silhouette-specific config
+  @@main_config = nil # Main config.yaml (HP bar, colors, fonts, etc)
   @@silhouette_file = nil
   @@silhouette_pixbuf = nil
   @@panel_width_entry = nil
@@ -79,10 +76,11 @@ module CreatureBarCalibrate
   @@hp_show_percentage_check = nil
   @@status_font_size_entry = nil
   @@status_show_check = nil
-  @@panel_preview_container = nil  # Container holding the panel preview
-  @@main_box = nil  # Main window box
+  @@panel_preview_container = nil # Container holding the panel preview
+  @@main_box = nil # Main window box
   # Layout size now comes from panel_width/panel_height in config (no longer hardcoded)
-  @@loading_config = false  # Flag to prevent signal handlers from firing during config load
+  @@loading_config = false # Flag to prevent signal handlers from firing during config load
+  @@panel_size_feedback_label = nil # Shows actual vs configured panel size
 
   class << self
     def get_available_silhouettes
@@ -106,7 +104,7 @@ module CreatureBarCalibrate
       if File.exist?(CONFIG_FILE)
         begin
           @@main_config = YAML.load_file(CONFIG_FILE)
-        rescue => e
+        rescue StandardError
           @@main_config = {}
         end
       else
@@ -119,7 +117,7 @@ module CreatureBarCalibrate
       if File.exist?(config_file)
         begin
           @@config = YAML.load_file(config_file)
-        rescue => e
+        rescue StandardError
           @@config = { 'scale' => 1.0, 'panel_width' => 100, 'panel_height' => 220, 'marker_size' => 12, 'body_parts' => {} }
         end
       else
@@ -144,7 +142,7 @@ module CreatureBarCalibrate
 
       if @@main_config['hp_bar']
         @@main_config['hp_bar'].each do |key, value|
-          next if key == 'ranges'  # Don't merge ranges
+          next if key == 'ranges' # Don't merge ranges
           @@config['hp_bar'][key] = value if @@config['hp_bar'][key].nil?
         end
       end
@@ -185,6 +183,75 @@ module CreatureBarCalibrate
       end
     end
 
+    def copy_settings_to_all_creatures
+      # Confirm action with user
+      dialog = Gtk::MessageDialog.new(
+        parent: @@window,
+        flags: :destroy_with_parent,
+        type: :question,
+        buttons: :yes_no,
+        message: "Copy current UI settings to ALL creature configs?\n\n" \
+                 "This will update: scale, marker_size, panel dimensions, name/HP/status settings\n" \
+                 "Body part coordinates will NOT be affected."
+      )
+
+      response = dialog.run
+      dialog.destroy
+      return unless response == Gtk::ResponseType::YES
+
+      # Apply all current UI values before copying
+      apply_scale
+      apply_panel_width
+      apply_panel_height if @@panel_height_entry
+      apply_marker_size
+      apply_name_settings
+      apply_hp_settings
+      apply_status_settings
+
+      # Extract current settings (everything except body_parts)
+      settings_to_copy = {
+        'scale'        => @@config['scale'],
+        'marker_size'  => @@config['marker_size'],
+        'panel_width'  => @@config['panel_width'],
+        'panel_height' => @@config['panel_height'],
+        'name_display' => @@config['name_display'],
+        'hp_bar'       => @@config['hp_bar'],
+        'status'       => @@config['status']
+      }
+
+      updated_count = 0
+      error_count = 0
+
+      # Iterate through all creature YAML files
+      Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |yaml_file|
+        begin
+          # Load existing config
+          existing_config = File.exist?(yaml_file) ? YAML.load_file(yaml_file) : {}
+
+          # Preserve body_parts, update everything else
+          updated_config = settings_to_copy.merge({
+            'body_parts' => existing_config['body_parts'] || {}
+          })
+
+          # Save updated config
+          File.write(yaml_file, updated_config.to_yaml)
+          updated_count += 1
+        rescue => e
+          puts "Error updating #{File.basename(yaml_file)}: #{e.message}"
+          error_count += 1
+        end
+      end
+
+      # Show success message
+      message = "UI settings copied to #{updated_count} creature config(s)!\n\n" \
+                "Settings synced: scale, marker_size, panel dimensions, name/HP/status\n" \
+                "Body part coordinates preserved."
+      message += "\n\n#{error_count} error(s) occurred." if error_count > 0
+      show_message(message)
+    rescue => e
+      show_message("Error during bulk sync: #{e.message}")
+    end
+
     def create_window
       @@window = Gtk::Window.new('CreatureBar Calibrator')
       @@window.set_default_size(300, 500)
@@ -192,11 +259,11 @@ module CreatureBarCalibrate
         # Queue the cleanup and script termination
         Thread.new do
           stop
-          sleep 0.1  # Give GTK time to clean up
+          sleep 0.1 # Give GTK time to clean up
           script_name = Script.current.name rescue 'calibrate_creaturebar'
           Script.kill(script_name) if Script.running?(script_name)
         end
-        false  # Allow window to close normally
+        false # Allow window to close normally
       end
 
       # Apply dark mode CSS styling
@@ -205,10 +272,7 @@ module CreatureBarCalibrate
       # Load main config to get border colors
       main_config = {}
       if File.exist?(CONFIG_FILE)
-        begin
-          main_config = YAML.load_file(CONFIG_FILE)
-        rescue => e
-        end
+        main_config = YAML.load_file(CONFIG_FILE) rescue {}
       end
 
       other_border = main_config.dig('colors', 'other_target_border') || '#555555'
@@ -311,6 +375,11 @@ module CreatureBarCalibrate
           background-color: #2e2e2e;
           background-image: none;
         }
+        label#status_label {
+          padding: 0px;
+          margin: 0px;
+          font-weight: bold;
+        }
         frame#creature_panel {
           border: 2px solid #{other_border};
           border-radius: 3px;
@@ -405,6 +474,11 @@ module CreatureBarCalibrate
       ph_box.pack_start(@@panel_height_entry, expand: false, fill: false, padding: 2)
       sil_tab.pack_start(ph_box, expand: false, fill: false, padding: 5)
 
+      # Panel size feedback - shows actual content size vs configured
+      @@panel_size_feedback_label = Gtk::Label.new
+      @@panel_size_feedback_label.set_markup("<small><i>Content size: calculating...</i></small>")
+      sil_tab.pack_start(@@panel_size_feedback_label, expand: false, fill: false, padding: 2)
+
       notebook.append_page(sil_tab, Gtk::Label.new('Silhouette'))
 
       # Tab 2: Name Display Settings
@@ -485,6 +559,15 @@ module CreatureBarCalibrate
       @@hp_show_text_check.active = @@config.dig('hp_bar', 'show_text')
       @@hp_show_text_check.signal_connect('toggled') { apply_hp_settings }
       style_row.pack_start(@@hp_show_text_check, expand: false, fill: false, padding: 10)
+      # Text position (only for overlay mode)
+      style_row.pack_start(Gtk::Label.new('Pos:'), expand: false, fill: false, padding: 2)
+      @@hp_text_position_combo = Gtk::ComboBoxText.new
+      @@hp_text_position_combo.append_text('Top')
+      @@hp_text_position_combo.append_text('Bottom')
+      text_pos = @@config.dig('hp_bar', 'text_position') || 'top'
+      @@hp_text_position_combo.active = (text_pos == 'bottom' ? 1 : 0)
+      @@hp_text_position_combo.signal_connect('changed') { apply_hp_settings }
+      style_row.pack_start(@@hp_text_position_combo, expand: false, fill: false, padding: 2)
       hp_tab.pack_start(style_row, expand: false, fill: false, padding: 5)
 
       # Row: Text format checkboxes
@@ -529,7 +612,7 @@ module CreatureBarCalibrate
       hp_tab.pack_start(dims_row, expand: false, fill: false, padding: 5)
 
       hp_note = Gtk::Label.new
-      hp_note.set_markup("<small><i>Note: Height only for embedded mode.\nOverlay mode uses fixed 8px height.</i></small>")
+      hp_note.set_markup("<small><i>Default height: 8px overlay, 25px embedded</i></small>")
       hp_tab.pack_start(hp_note, expand: false, fill: false, padding: 5)
 
       notebook.append_page(hp_tab, Gtk::Label.new('HP Bar'))
@@ -591,6 +674,14 @@ module CreatureBarCalibrate
       nav_box.pack_start(@@save_button, expand: true, fill: true, padding: 0)
       @@main_box.pack_start(nav_box, expand: false, fill: false, padding: 2)
 
+      # Copy UI Settings to All button
+      copy_box = Gtk::Box.new(:horizontal, 5)
+      @@copy_to_all_button = Gtk::Button.new(label: 'Copy UI Settings to All Creatures')
+      @@copy_to_all_button.set_tooltip_text('Copy scale, marker size, panel dimensions, and display settings to all creature configs (preserves body_parts)')
+      @@copy_to_all_button.signal_connect('clicked') { copy_settings_to_all_creatures }
+      copy_box.pack_start(@@copy_to_all_button, expand: true, fill: true, padding: 0)
+      @@main_box.pack_start(copy_box, expand: false, fill: false, padding: 2)
+
       # Panel preview
       @@panel_preview_container = create_panel_preview
       @@main_box.pack_start(@@panel_preview_container, expand: true, fill: true, padding: 5)
@@ -601,8 +692,26 @@ module CreatureBarCalibrate
       @@main_box.pack_start(instructions, expand: false, fill: false, padding: 2)
 
       @@window.add(@@main_box)
-      @@window.signal_connect('key-press-event') { |widget, event| handle_key_press(event) }
+      @@window.signal_connect('key-press-event') { |_widget, event| handle_key_press(event) }
+
+      # Track window position changes and save to config
+      @@window.signal_connect('configure-event') do |_widget, event|
+        # Only save if window is visible and position has actually changed
+        if @@window.visible?
+          @@main_config['calibrator'] ||= {}
+          @@main_config['calibrator']['window_x'] = event.x
+          @@main_config['calibrator']['window_y'] = event.y
+          save_main_config
+        end
+        false
+      end
+
       @@window.show_all
+
+      # Restore saved window position after showing
+      if @@main_config.dig('calibrator', 'window_x') && @@main_config.dig('calibrator', 'window_y')
+        @@window.move(@@main_config['calibrator']['window_x'], @@main_config['calibrator']['window_y'])
+      end
     end
 
     def current_part_name
@@ -649,7 +758,7 @@ module CreatureBarCalibrate
 
       panel_box = Gtk::Box.new(:vertical, 0)
       panel_box.set_margin_top(2)
-      panel_box.set_margin_bottom(2)
+      panel_box.set_margin_bottom(1)
       panel_box.set_margin_left(4)
       panel_box.set_margin_right(4)
 
@@ -688,7 +797,7 @@ module CreatureBarCalibrate
 
       @@layout = Gtk::Layout.new
       @@layout.add_events(Gdk::EventMask::BUTTON_PRESS_MASK)
-      @@layout.signal_connect('button-press-event') do |widget, event|
+      @@layout.signal_connect('button-press-event') do |_widget, event|
         handle_click(event.x.to_i, event.y.to_i)
       end
 
@@ -697,13 +806,13 @@ module CreatureBarCalibrate
           @@silhouette_pixbuf = GdkPixbuf::Pixbuf.new(file: @@silhouette_file)
 
           # Apply scaling
-          scaled_pixbuf = if silhouette_scale != 1.0
-            new_width = (@@silhouette_pixbuf.width * silhouette_scale).to_i
-            new_height = (@@silhouette_pixbuf.height * silhouette_scale).to_i
-            @@silhouette_pixbuf.scale_simple(new_width, new_height, GdkPixbuf::InterpType::BILINEAR)
-          else
-            @@silhouette_pixbuf
-          end
+          scaled_pixbuf = if (silhouette_scale - 1.0).abs > 0.001
+                            new_width = (@@silhouette_pixbuf.width * silhouette_scale).to_i
+                            new_height = (@@silhouette_pixbuf.height * silhouette_scale).to_i
+                            @@silhouette_pixbuf.scale_simple(new_width, new_height, GdkPixbuf::InterpType::BILINEAR)
+                          else
+                            @@silhouette_pixbuf
+                          end
 
           # Set layout to pixbuf size (keeps calibrator compact)
           @@layout.set_size_request(scaled_pixbuf.width, scaled_pixbuf.height)
@@ -711,7 +820,8 @@ module CreatureBarCalibrate
           # Place silhouette at origin
           @@silhouette_image = Gtk::Image.new(pixbuf: scaled_pixbuf)
           @@layout.put(@@silhouette_image, 0, 0)
-        rescue => e
+        rescue StandardError # Silently ignore image loading errors
+          nil
         end
       end
 
@@ -726,8 +836,10 @@ module CreatureBarCalibrate
       if @@config.dig('hp_bar', 'show') != false
         text_style = @@config.dig('hp_bar', 'text_style') || 'overlay'
         show_bar_graphic = @@config.dig('hp_bar', 'show_bar') != false
+        text_position = @@config.dig('hp_bar', 'text_position') || 'top'
 
-        # HP label for overlay mode (or text-only when bar is hidden) - PACK FIRST so it appears ABOVE bar
+        # Create HP label for overlay mode
+        hp_label = nil
         if text_style == 'overlay' && @@config.dig('hp_bar', 'show_text')
           hp_label = Gtk::Label.new
           hp_label.name = 'hp_label'
@@ -736,14 +848,15 @@ module CreatureBarCalibrate
           font_size = (@@config.dig('hp_bar', 'font_size') || 11) * 1024
           hp_text = build_hp_text(350, 350, 100, @@config.dig('hp_bar'))
           hp_label.set_markup("<span color='#{hp_text_color}' size='#{font_size}'>#{hp_text}</span>")
-          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0)
         end
 
-        # HP bar graphic (only if show_bar is true) - PACK SECOND so it appears BELOW overlay text
-        hp_bar = nil
+        # Create HP bar graphic (only if show_bar is true)
+        hp_container = nil
         if show_bar_graphic
           hp_bar_width = @@config.dig('hp_bar', 'width') || 120
-          hp_bar_height = text_style == 'embedded' ? (@@config.dig('hp_bar', 'height') || 25) : 8
+          # Use configured height for both modes (different defaults)
+          default_height = text_style == 'embedded' ? 25 : 8
+          hp_bar_height = @@config.dig('hp_bar', 'height') || default_height
 
           hp_bar = Gtk::DrawingArea.new
           hp_bar.set_size_request(hp_bar_width, hp_bar_height)
@@ -787,7 +900,17 @@ module CreatureBarCalibrate
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
           hp_container.pack_start(hp_bar, expand: false, fill: false, padding: 0)
           hp_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
-          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 1)
+        end
+
+        # Pack HP elements based on text_position setting (only affects overlay mode)
+        if text_position == 'bottom'
+          # Bar first, then text below
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+        else
+          # Text first (top), then bar below (default)
+          panel_box.pack_start(hp_label, expand: false, fill: false, padding: 0) if hp_label
+          panel_box.pack_start(hp_container, expand: false, fill: false, padding: 0) if hp_container
         end
       end
 
@@ -842,11 +965,8 @@ module CreatureBarCalibrate
 
       # Remove old marker if exists
       if @@wound_marker
-        begin
-          @@layout.remove(@@wound_marker) if @@wound_marker.parent == @@layout
-        rescue => e
-          # Layout may have been destroyed, just clear the reference
-        end
+        # Layout may have been destroyed, just clear the reference
+        @@layout.remove(@@wound_marker) if @@wound_marker.parent == @@layout rescue nil
         @@wound_marker = nil
       end
 
@@ -862,7 +982,7 @@ module CreatureBarCalibrate
           pixbuf = pixbuf.scale_simple(size, size, GdkPixbuf::InterpType::BILINEAR)
 
           @@wound_marker = Gtk::Image.new(pixbuf: pixbuf)
-        rescue => e
+        rescue StandardError
           @@wound_marker = Gtk::Label.new("R#{@@current_rank}")
         end
       else
@@ -924,155 +1044,223 @@ module CreatureBarCalibrate
     end
 
     def apply_scale
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        new_scale = @@scale_entry.text.to_f
-        new_scale = [[new_scale, 0.1].max, 5.0].min  # Clamp between 0.1 and 5.0
+      new_scale = @@scale_entry.text.to_f
+      new_scale = [[new_scale, 0.1].max, 5.0].min # Clamp between 0.1 and 5.0
 
-        # Update config
-        @@config['scale'] = new_scale
+      # Update config
+      @@config['scale'] = new_scale
 
-        # Update entry to show clamped value
-        @@scale_entry.text = new_scale.round(1).to_s
+      # Update entry to show clamped value
+      @@scale_entry.text = new_scale.round(1).to_s
 
-        Gtk.queue do
-          reload_silhouette
-        end
-      rescue => e
+      # Auto-calculate marker size based on scale (14px at scale 1.0)
+      new_marker_size = (14 * new_scale).round.clamp(2, 30)
+      @@config['marker_size'] = new_marker_size
+      @@marker_size_entry.text = new_marker_size.to_s
+
+      Gtk.queue do
+        reload_silhouette
+        update_wound_marker
       end
+    rescue StandardError
+      nil
     end
 
     def apply_panel_width
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        new_width = @@panel_width_entry.text.to_i
-        new_width = [[new_width, 50].max, 300].min  # Clamp between 50 and 300
+      new_width = @@panel_width_entry.text.to_i
+      new_width = [[new_width, 20].max, 300].min # Clamp between 20 and 300
 
-        @@config['panel_width'] = new_width
-        @@panel_width_entry.text = new_width.to_s
+      @@config['panel_width'] = new_width
+      @@panel_width_entry.text = new_width.to_s
 
-        # Update the panel frame size to show new dimensions
-        if @@panel_frame
-          panel_height = @@config['panel_height'] || 220
-          @@panel_frame.set_size_request(new_width, panel_height)
-        end
-      rescue => e
+      # Update the panel frame size to show new dimensions
+      if @@panel_frame
+        panel_height = @@config['panel_height'] || 220
+        @@panel_frame.set_size_request(new_width, panel_height)
       end
+
+      update_panel_size_feedback
+    rescue StandardError
+      nil
     end
 
     def apply_panel_height
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        new_height = @@panel_height_entry.text.to_i
-        new_height = [[new_height, 50].max, 400].min  # Clamp between 50 and 400
+      new_height = @@panel_height_entry.text.to_i
+      new_height = [[new_height, 20].max, 400].min # Clamp between 20 and 400
 
-        @@config['panel_height'] = new_height
-        @@panel_height_entry.text = new_height.to_s
+      @@config['panel_height'] = new_height
+      @@panel_height_entry.text = new_height.to_s
 
-        # Update the panel frame size to show new dimensions
-        if @@panel_frame
-          panel_width = @@config['panel_width'] || 100
-          @@panel_frame.set_size_request(panel_width, new_height)
-        end
-      rescue => e
+      # Update the panel frame size to show new dimensions
+      if @@panel_frame
+        panel_width = @@config['panel_width'] || 100
+        @@panel_frame.set_size_request(panel_width, new_height)
       end
+
+      update_panel_size_feedback
+    rescue StandardError
+      nil
     end
 
     def apply_marker_size
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        new_size = @@marker_size_entry.text.to_i
-        new_size = [[new_size, 6].max, 30].min  # Clamp between 6 and 30
+      new_size = @@marker_size_entry.text.to_i
+      new_size = [[new_size, 2].max, 30].min # Clamp between 2 and 30
 
-        @@config['marker_size'] = new_size
-        @@marker_size_entry.text = new_size.to_s
+      @@config['marker_size'] = new_size
+      @@marker_size_entry.text = new_size.to_s
 
-        # Update the wound marker display
-        Gtk.queue do
-          update_wound_marker
-        end
-      rescue => e
+      # Update the wound marker display
+      Gtk.queue do
+        update_wound_marker
       end
+    rescue StandardError
+      nil
     end
 
     def apply_name_settings
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        # Update per-silhouette config
-        @@config['name_display'] ||= {}
-        @@config['name_display']['show'] = @@name_show_check.active?
-        @@config['name_display']['font_size'] = @@name_font_size_entry.text.to_i.clamp(6, 24)
-        @@config['name_display']['font_weight'] = @@name_font_weight_combo.active == 1 ? 'bold' : 'normal'
-        @@config['name_display']['mode'] = @@name_mode_name_radio.active? ? 'name' : 'noun'
+      # Update per-silhouette config
+      @@config['name_display'] ||= {}
+      @@config['name_display']['show'] = @@name_show_check.active?
+      @@config['name_display']['font_size'] = @@name_font_size_entry.text.to_i.clamp(6, 24)
+      @@config['name_display']['font_weight'] = @@name_font_weight_combo.active == 1 ? 'bold' : 'normal'
+      @@config['name_display']['mode'] = @@name_mode_name_radio.active? ? 'name' : 'noun'
 
-        # Update entry to show clamped value
-        @@name_font_size_entry.text = @@config['name_display']['font_size'].to_s
+      # Update entry to show clamped value
+      @@name_font_size_entry.text = @@config['name_display']['font_size'].to_s
 
-        rebuild_preview
-      rescue => e
-      end
+      rebuild_preview
+    rescue StandardError
+      nil
     end
 
     def apply_hp_settings
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        # Update per-silhouette config
-        @@config['hp_bar'] ||= {}
-        @@config['hp_bar']['show'] = @@hp_show_check.active?
-        @@config['hp_bar']['show_bar'] = @@hp_show_bar_check.active?
-        @@config['hp_bar']['text_style'] = @@hp_text_style_combo.active == 1 ? 'embedded' : 'overlay'
-        @@config['hp_bar']['show_text'] = @@hp_show_text_check.active?
-        @@config['hp_bar']['show_hp_prefix'] = @@hp_show_hp_prefix_check.active?
-        @@config['hp_bar']['show_numbers'] = @@hp_show_numbers_check.active?
-        @@config['hp_bar']['show_percentage'] = @@hp_show_percentage_check.active?
-        @@config['hp_bar']['width'] = @@hp_width_entry.text.to_i.clamp(50, 200)
-        @@config['hp_bar']['height'] = @@hp_height_entry.text.to_i.clamp(8, 40)
-        @@config['hp_bar']['font_size'] = @@hp_font_size_entry.text.to_i.clamp(6, 20)
+      # Update per-silhouette config
+      @@config['hp_bar'] ||= {}
+      @@config['hp_bar']['show'] = @@hp_show_check.active?
+      @@config['hp_bar']['show_bar'] = @@hp_show_bar_check.active?
+      @@config['hp_bar']['text_style'] = @@hp_text_style_combo.active == 1 ? 'embedded' : 'overlay'
+      @@config['hp_bar']['show_text'] = @@hp_show_text_check.active?
+      @@config['hp_bar']['text_position'] = @@hp_text_position_combo.active == 1 ? 'bottom' : 'top'
+      @@config['hp_bar']['show_hp_prefix'] = @@hp_show_hp_prefix_check.active?
+      @@config['hp_bar']['show_numbers'] = @@hp_show_numbers_check.active?
+      @@config['hp_bar']['show_percentage'] = @@hp_show_percentage_check.active?
+      @@config['hp_bar']['width'] = @@hp_width_entry.text.to_i.clamp(20, 200)
+      @@config['hp_bar']['height'] = @@hp_height_entry.text.to_i.clamp(4, 40)
+      @@config['hp_bar']['font_size'] = @@hp_font_size_entry.text.to_i.clamp(6, 20)
 
-        # Update entries to show clamped values
-        @@hp_width_entry.text = @@config['hp_bar']['width'].to_s
-        @@hp_height_entry.text = @@config['hp_bar']['height'].to_s
-        @@hp_font_size_entry.text = @@config['hp_bar']['font_size'].to_s
+      # Update entries to show clamped values
+      @@hp_width_entry.text = @@config['hp_bar']['width'].to_s
+      @@hp_height_entry.text = @@config['hp_bar']['height'].to_s
+      @@hp_font_size_entry.text = @@config['hp_bar']['font_size'].to_s
 
-        rebuild_preview
-      rescue => e
-      end
+      rebuild_preview
+    rescue StandardError
+      nil
     end
 
     def apply_status_settings
-      return if @@loading_config  # Skip if loading config to prevent overwriting values
+      return if @@loading_config # Skip if loading config to prevent overwriting values
 
-      begin
-        # Update per-silhouette config
-        @@config['status'] ||= {}
-        @@config['status']['show'] = @@status_show_check.active?
-        @@config['status']['font_size'] = @@status_font_size_entry.text.to_i.clamp(6, 24)
+      # Update per-silhouette config
+      @@config['status'] ||= {}
+      @@config['status']['show'] = @@status_show_check.active?
+      @@config['status']['font_size'] = @@status_font_size_entry.text.to_i.clamp(6, 24)
 
-        # Update entry to show clamped value
-        @@status_font_size_entry.text = @@config['status']['font_size'].to_s
+      # Update entry to show clamped value
+      @@status_font_size_entry.text = @@config['status']['font_size'].to_s
 
-        rebuild_preview
-      rescue => e
-      end
+      rebuild_preview
+    rescue StandardError
+      nil
     end
 
     def save_main_config
-      begin
-        File.open(CONFIG_FILE, 'w') { |f| f.write(@@main_config.to_yaml) }
-      rescue => e
+      File.open(CONFIG_FILE, 'w') { |f| f.write(@@main_config.to_yaml) }
+    rescue StandardError
+      nil
+    end
+
+    def update_panel_size_feedback
+      return unless @@panel_size_feedback_label && !@@panel_size_feedback_label.destroyed?
+      return unless @@config
+
+      # Calculate actual content size based on current settings
+      scale = @@config['scale'] || 0.8
+
+      # Get silhouette dimensions
+      silhouette_width = 0
+      silhouette_height = 0
+      if @@silhouette_pixbuf
+        silhouette_width = (@@silhouette_pixbuf.width * scale).to_i
+        silhouette_height = (@@silhouette_pixbuf.height * scale).to_i
       end
+
+      # Estimate other element heights (font_size * ~1.4 for line height + padding)
+      name_height = @@config.dig('name_display', 'show') ? ((@@config.dig('name_display', 'font_size') || 12) * 1.4).to_i + 2 : 0
+
+      hp_height = 0
+      if @@config.dig('hp_bar', 'show') != false
+        text_style = @@config.dig('hp_bar', 'text_style') || 'overlay'
+        if text_style == 'overlay' && @@config.dig('hp_bar', 'show_text')
+          hp_height += ((@@config.dig('hp_bar', 'font_size') || 11) * 1.4).to_i + 1
+        end
+        if @@config.dig('hp_bar', 'show_bar') != false
+          default_height = text_style == 'embedded' ? 25 : 8
+          hp_height += @@config.dig('hp_bar', 'height') || default_height
+        end
+      end
+
+      status_height = @@config.dig('status', 'show') ? ((@@config.dig('status', 'font_size') || 12) * 1.4).to_i + 2 : 0
+
+      # Calculate total content size
+      # panel_box margins: left=4, right=4, top=2, bottom=1
+      # frame border: 2px each side + GTK internal spacing
+      horizontal_padding = 4 + 4 + 2 + 2 + 2  # margins + border + frame padding = 14
+      vertical_padding = 2 + 1 + 2 + 2 + 7    # margins + border + GTK spacing = 14
+
+      content_width = [silhouette_width, @@config.dig('hp_bar', 'width') || 0].max + horizontal_padding
+      content_height = name_height + silhouette_height + hp_height + status_height + vertical_padding
+
+      # Get configured size
+      configured_width = @@config['panel_width'] || 100
+      configured_height = @@config['panel_height'] || 220
+
+      # Build feedback message
+      width_ok = content_width <= configured_width
+      height_ok = content_height <= configured_height
+
+      if width_ok && height_ok
+        markup = "<small><span color='#88cc88'>Content fits: #{content_width}x#{content_height}px</span></small>"
+      else
+        warnings = []
+        warnings << "W:#{content_width}" unless width_ok
+        warnings << "H:#{content_height}" unless height_ok
+        markup = "<small><span color='#ffaa44'>Content needs: #{content_width}x#{content_height}px</span></small>"
+      end
+
+      Gtk.queue do
+        @@panel_size_feedback_label.set_markup(markup) if @@panel_size_feedback_label && !@@panel_size_feedback_label.destroyed?
+      end
+    rescue StandardError
+      nil # Silently fail
     end
 
     def rebuild_preview
       # Completely recreate the panel preview with new settings
       # This is called when name/hp/status settings change
-      return if @@loading_config  # Skip if loading config to prevent rebuilding with inconsistent values
+      return if @@loading_config # Skip if loading config to prevent rebuilding with inconsistent values
       return unless @@running
       return unless @@main_box && @@panel_preview_container
       return if @@main_box.destroyed? || @@panel_preview_container.destroyed?
@@ -1090,11 +1278,14 @@ module CreatureBarCalibrate
 
         # Re-insert it in the right position (before instructions)
         children = @@main_box.children
-        instructions_index = children.size - 1  # Instructions is last
+        instructions_index = children.size - 1 # Instructions is last
         @@main_box.pack_start(@@panel_preview_container, expand: true, fill: true, padding: 5)
         @@main_box.reorder_child(@@panel_preview_container, instructions_index)
 
         @@panel_preview_container.show_all
+
+        # Update size feedback after rebuild
+        update_panel_size_feedback
       end
     end
 
@@ -1119,6 +1310,8 @@ module CreatureBarCalibrate
         @@hp_show_bar_check.active = @@config['hp_bar']['show_bar'] != false
         @@hp_text_style_combo.active = (@@config['hp_bar']['text_style'] == 'embedded' ? 1 : 0)
         @@hp_show_text_check.active = @@config['hp_bar']['show_text'] != false
+        text_pos = @@config['hp_bar']['text_position'] || 'top'
+        @@hp_text_position_combo.active = (text_pos == 'bottom' ? 1 : 0)
         @@hp_show_hp_prefix_check.active = @@config['hp_bar']['show_hp_prefix'] != false
         @@hp_show_numbers_check.active = @@config['hp_bar']['show_numbers'] != false
         @@hp_show_percentage_check.active = @@config['hp_bar']['show_percentage'] != false
@@ -1173,33 +1366,23 @@ module CreatureBarCalibrate
       # Reload the pixbuf from file (in case family changed)
       @@silhouette_file = File.join(SILHOUETTE_DIR, "#{@@current_family}.png")
 
-      unless File.exist?(@@silhouette_file)
-        return
-      end
+      return unless File.exist?(@@silhouette_file)
 
-      begin
-        @@silhouette_pixbuf = GdkPixbuf::Pixbuf.new(file: @@silhouette_file)
-      rescue => e
-        return
-      end
-
+      @@silhouette_pixbuf = GdkPixbuf::Pixbuf.new(file: @@silhouette_file) rescue nil
       return unless @@silhouette_pixbuf
 
       # Get current scale
       scale = @@config['scale'] || 0.8
 
       # Scale the pixbuf
-      begin
-        scaled_pixbuf = if scale != 1.0
-          new_width = (@@silhouette_pixbuf.width * scale).to_i
-          new_height = (@@silhouette_pixbuf.height * scale).to_i
-          @@silhouette_pixbuf.scale_simple(new_width, new_height, GdkPixbuf::InterpType::BILINEAR)
-        else
-          @@silhouette_pixbuf
-        end
-      rescue => e
-        scaled_pixbuf = @@silhouette_pixbuf
-      end
+      scaled_pixbuf = if (scale - 1.0).abs > 0.001
+                        new_width = (@@silhouette_pixbuf.width * scale).to_i
+                        new_height = (@@silhouette_pixbuf.height * scale).to_i
+                        @@silhouette_pixbuf.scale_simple(new_width, new_height, GdkPixbuf::InterpType::BILINEAR)
+                      else
+                        @@silhouette_pixbuf
+                      end
+      scaled_pixbuf ||= @@silhouette_pixbuf
 
       return unless scaled_pixbuf && scaled_pixbuf.width > 0 && scaled_pixbuf.height > 0
 
@@ -1226,6 +1409,9 @@ module CreatureBarCalibrate
 
       # Update wound marker
       update_wound_marker
+
+      # Update size feedback
+      update_panel_size_feedback
     end
 
     def handle_key_press(event)
