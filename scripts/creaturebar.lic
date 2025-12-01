@@ -231,10 +231,11 @@ module CreatureBar
       def prompt_download
         respond ""
         respond "==========================================================="
-        respond " CreatureBar - First Run Setup"
+        respond " CreatureBar - Asset Download"
         respond "==========================================================="
         respond ""
-        respond "CreatureBar needs to download silhouette assets via Jinx."
+        respond "Download silhouette assets via Jinx."
+        respond "(Already installed files will be skipped)"
         respond ""
         respond "Choose a pack to install:"
         respond ""
@@ -314,7 +315,7 @@ module CreatureBar
         success_count == package_assets.size
       end
 
-      def download_asset(repo, asset)
+      def download_asset(repo, asset, overwrite: false)
         remote_path = asset[:file]
         filename = File.basename(remote_path)
 
@@ -334,7 +335,7 @@ module CreatureBar
           [repo],
           target_dir,
           filename,
-          overwrite: false,
+          overwrite: overwrite,
           force: false,
           asset_type: "data"
         )
@@ -404,7 +405,7 @@ module CreatureBar
         if input =~ /^y/i
           success = 0
           updates.each do |update|
-            if download_asset(update[:repo], update[:asset])
+            if download_asset(update[:repo], update[:asset], overwrite: true)
               success += 1
             end
           end
@@ -423,14 +424,12 @@ module CreatureBar
 
         require 'digest'
 
-        local_digest = Digest::SHA1.new
-        File.open(local_path, 'rb') do |f|
-          while chunk = f.read(8192)
-            local_digest.update(chunk)
-          end
-        end
+        # Jinx manifests supply MD5 digests; compare both hex and base64 forms
+        local_hex = Digest::MD5.file(local_path).hexdigest
+        local_b64 = [[local_hex].pack('H*')].pack('m0')
 
-        local_digest.base64digest != remote_digest
+        return true if remote_digest.nil?
+        remote_digest != local_hex && remote_digest != local_b64
       end
 
       def clear_assets
@@ -1173,7 +1172,7 @@ module CreatureBar
 
     def create_wound_marker(level, marker_size = nil)
       # Load wound image from Rank PNG files
-      rank_file = File.join(SILHOUETTE_DIR, "Rank#{level}.png")
+      rank_file = File.join(SILHOUETTE_DIR, "rank#{level}.png")
 
       if File.exist?(rank_file)
         begin
@@ -1475,12 +1474,14 @@ module CreatureBar
 
       # Always On Top
       widgets[:always_on_top] = Gtk::CheckButton.new('Always on top')
-      widgets[:always_on_top].active = @@config.dig('window', 'always_on_top') || true
+      always_on_top = @@config.dig('window', 'always_on_top')
+      widgets[:always_on_top].active = always_on_top.nil? ? true : always_on_top
       box.pack_start(widgets[:always_on_top], expand: false, fill: false, padding: 5)
 
       # Decorated
       widgets[:decorated] = Gtk::CheckButton.new('Show window title bar')
-      widgets[:decorated].active = @@config.dig('window', 'decorated') || true
+      decorated = @@config.dig('window', 'decorated')
+      widgets[:decorated].active = decorated.nil? ? true : decorated
       box.pack_start(widgets[:decorated], expand: false, fill: false, padding: 5)
 
       # Transparent
@@ -2205,8 +2206,8 @@ module CreatureBar
     end
 
     def update_hp_for_panel(panel, creature)
-      # Skip if HP bar is disabled
-      return unless panel[:hp_bar]
+      # Skip if HP bar and HP label are both disabled
+      return unless panel[:hp_bar] || panel[:hp_label]
 
       max_hp = creature.max_hp
       current_hp = creature.current_hp
