@@ -366,6 +366,25 @@ module CreatureBar
         true
       end
 
+      # Extract the base area name from a package name
+      # e.g., 'hinterwilds-color' -> 'hinterwilds'
+      #       'hinterwilds-shadow-v2' -> 'hinterwilds'
+      #       'atoll-shadow' -> 'atoll'
+      def extract_area_name(package_name)
+        # Remove style suffix (-color, -shadow) and version suffix (-v1, -v2)
+        package_name.sub(/-(?:color|shadow)(?:-v\d+)?$/, '')
+      end
+
+      # Get the config package name for an area (configs are always in *-shadow packages)
+      def config_package_for_area(area_name, repo)
+        # Look for {area}-shadow package that has config files
+        config_pkg = "creaturebar-#{area_name}-shadow"
+        config_assets = repo[:available].select do |a|
+          a[:package] == config_pkg && a[:file].include?('/silhouette_configs/')
+        end
+        config_assets.any? ? config_pkg : nil
+      end
+
       def download_package(package_name, repo = nil)
         begin
           repo ||= get_repo
@@ -387,15 +406,36 @@ module CreatureBar
           return false
         end
 
+        # Check if this package has its own configs
+        has_own_configs = package_assets.any? { |a| a[:file].include?('/silhouette_configs/') }
+
+        # If no configs, try to include configs from the base shadow package for this area
+        # This allows color packs and versioned packs to share configs with the base shadow pack
+        config_assets = []
+        unless has_own_configs || package_name == 'default'
+          area_name = extract_area_name(package_name)
+          config_pkg = config_package_for_area(area_name, repo)
+
+          if config_pkg && config_pkg != "creaturebar-#{package_name}"
+            config_assets = repo[:available].select do |a|
+              a[:package] == config_pkg && a[:file].include?('/silhouette_configs/')
+            end
+            if config_assets.any?
+              respond "  (including #{config_assets.size} configs from #{config_pkg.sub('creaturebar-', '')})"
+            end
+          end
+        end
+
+        all_assets = package_assets + config_assets
         success_count = 0
-        package_assets.each do |asset|
+        all_assets.each do |asset|
           if download_asset(repo, asset)
             success_count += 1
           end
         end
 
-        respond "Downloaded #{success_count}/#{package_assets.size} files for #{package_name}"
-        success_count == package_assets.size
+        respond "Downloaded #{success_count}/#{all_assets.size} files for #{package_name}"
+        success_count == all_assets.size
       end
 
       # Strip version suffix from folder names (e.g., 'hinterwilds_shadow_v2' -> 'hinterwilds_shadow')
