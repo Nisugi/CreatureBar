@@ -110,7 +110,7 @@ module CreatureBar
   # Helper method to get user input without sending to game
   # Uses UpstreamHook to intercept valid menu responses (y/n, numbers, cancel)
   # Other commands pass through to the game normally
-  def self.get_user_input(valid_pattern = /^<c>(y|n|yes|no|\d+|cancel)$/i)
+  def self.get_user_input(valid_pattern = /^<c>(a|y|n|yes|no|\d+|cancel)$/i)
     hook_name = "creaturebar_input_#{Time.now.to_i}"
     input_buffer = []
 
@@ -241,7 +241,7 @@ module CreatureBar
       end
 
       # Discover available packages from Jinx manifest
-      # Returns hash: { 'package_name' => { assets: [...], count: N } }
+      # Returns hash: { 'package_name' => { assets: [...], count: N, base: 'base-name', version: N } }
       def discover_packages(repo)
         packages = {}
 
@@ -249,15 +249,37 @@ module CreatureBar
           pkg_name = asset[:package]
           next unless pkg_name&.start_with?('creaturebar-')
 
-          # Extract package name (e.g., 'creaturebar-hinterwilds-shadow' -> 'hinterwilds-shadow')
+          # Extract package name (e.g., 'creaturebar-hinterwilds-shadow-v2' -> 'hinterwilds-shadow-v2')
           short_name = pkg_name.sub('creaturebar-', '')
 
-          packages[short_name] ||= { assets: [], count: 0 }
+          # Parse version and base name
+          if short_name =~ /^(.+)-v(\d+)$/
+            base_name = $1
+            version = $2.to_i
+          else
+            base_name = short_name
+            version = 0  # No version suffix = version 0 (older than v1)
+          end
+
+          packages[short_name] ||= { assets: [], count: 0, base: base_name, version: version }
           packages[short_name][:assets] << asset
           packages[short_name][:count] += 1
         end
 
         packages
+      end
+
+      # Get the latest version package for each base package name
+      def get_latest_packages(packages)
+        # Group by base name, pick highest version
+        by_base = {}
+        packages.each do |pkg_name, pkg_data|
+          base = pkg_data[:base]
+          if !by_base[base] || pkg_data[:version] > by_base[base][:version]
+            by_base[base] = { name: pkg_name, version: pkg_data[:version] }
+          end
+        end
+        by_base.values.map { |v| v[:name] }
       end
 
       def prompt_download
@@ -288,9 +310,17 @@ module CreatureBar
         respond "Available packages:"
         respond ""
 
-        # Sort packages for consistent display (default first, then alphabetically)
+        # Sort packages: default first, then by base name, then by version (highest first)
         sorted_packages = packages.keys.sort_by do |name|
-          name.start_with?('default') ? "0_#{name}" : "1_#{name}"
+          pkg = packages[name]
+          base = pkg[:base]
+          version = pkg[:version]
+          # Sort: default first (0_), then alphabetically by base (1_), then by version descending
+          if base == 'default'
+            "0_#{base}_#{1000 - version}"
+          else
+            "1_#{base}_#{1000 - version}"
+          end
         end
 
         # Display numbered list
@@ -298,7 +328,7 @@ module CreatureBar
           pkg = packages[pkg_name]
           respond "  [#{idx + 1}] #{pkg_name} (#{pkg[:count]} files)"
         end
-        respond "  [A] All packages"
+        respond "  [A] All packages (latest versions only)"
         respond ""
         respond "Enter choice (1-#{sorted_packages.size}, A for all), or 'cancel' to exit:"
 
@@ -306,8 +336,11 @@ module CreatureBar
 
         case input.downcase
         when 'a', 'all'
-          # Download all packages (default first)
-          sorted_packages.each { |pkg| download_package(pkg, repo) }
+          # Download only latest version of each base package (default first)
+          latest = get_latest_packages(packages)
+          # Sort so default is first
+          latest.sort_by! { |name| name.start_with?('default') ? "0_#{name}" : "1_#{name}" }
+          latest.each { |pkg| download_package(pkg, repo) }
         when /cancel/i
           respond "Setup cancelled. Run ;creaturebar again when ready."
           return false
@@ -316,8 +349,8 @@ module CreatureBar
           if idx >= 0 && idx < sorted_packages.size
             selected = sorted_packages[idx]
             # Always ensure default is downloaded first if not selecting default
-            unless selected.start_with?('default')
-              default_pkg = sorted_packages.find { |p| p.start_with?('default') }
+            unless packages[selected][:base] == 'default'
+              default_pkg = sorted_packages.find { |p| packages[p][:base] == 'default' }
               download_package(default_pkg, repo) if default_pkg
             end
             download_package(selected, repo)
@@ -1339,8 +1372,8 @@ module CreatureBar
     end
 
     def create_wound_marker(level, marker_size = nil)
-      # Load wound image from Rank PNG files
-      rank_file = File.join(SILHOUETTE_DIR, "rank#{level}.png")
+      # Load wound image from Rank PNG files (in default subfolder)
+      rank_file = File.join(SILHOUETTE_DIR, 'default', "rank#{level}.png")
 
       if File.exist?(rank_file)
         begin

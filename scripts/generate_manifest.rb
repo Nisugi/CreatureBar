@@ -5,12 +5,13 @@
 #   ruby scripts/generate_manifest.rb
 #
 # This scans the assets/ directory and creates a manifest.json with SHA1 digests
-# for each file, organized by package (creaturebar-default, creaturebar-hinterwilds-shadow, etc.)
+# for each file, organized by package (creaturebar-default, creaturebar-atoll-shadow-v2, etc.)
 #
 # Folder naming convention:
 #   - Folders can have version suffixes (e.g., hinterwilds_shadow_v2)
-#   - Package names are derived by stripping version suffix and prefixing with 'creaturebar-'
-#   - Example: hinterwilds_shadow_v2 -> creaturebar-hinterwilds-shadow
+#   - Package names preserve version: 'creaturebar-{folder}' with underscores as hyphens
+#   - Example: hinterwilds_shadow_v2 -> creaturebar-hinterwilds-shadow-v2
+#   - Users can choose which version to download; locally versions are stripped
 
 require 'json'
 require 'digest'
@@ -24,19 +25,14 @@ OUTPUT_FILE = 'manifest.json'
 # Files/folders to exclude from manifest (source files, work-in-progress)
 EXCLUDE_PATTERNS = [
   /\.xcf$/,           # GIMP source files
-  /_v1\//,            # Old versions (only include latest v2)
-  /colors\.xcf$/,     # Work files
-  /hinterwilds_shadow\//, # Older non-versioned hinterwilds (use v2 instead)
-  /atoll_shadow_v1\// # Old atoll v1 (use v2 instead)
+  /colors\.xcf$/      # Work files
 ]
 
-# Convert folder name to package name
-# e.g., 'hinterwilds_shadow_v2' -> 'creaturebar-hinterwilds-shadow'
+# Convert folder name to package name (preserve version suffix)
+# e.g., 'hinterwilds_shadow_v2' -> 'creaturebar-hinterwilds-shadow-v2'
 def folder_to_package(folder_name)
-  # Strip version suffix (_v1, _v2, etc.)
-  base_name = folder_name.sub(/_v\d+$/, '')
-  # Convert underscores to hyphens for package name
-  "creaturebar-#{base_name.gsub('_', '-')}"
+  # Convert underscores to hyphens for package name (keep version)
+  "creaturebar-#{folder_name.gsub('_', '-')}"
 end
 
 def calculate_sha1_base64(file_path)
