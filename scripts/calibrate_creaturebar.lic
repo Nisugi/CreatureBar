@@ -60,6 +60,7 @@ module CreatureBarCalibrate
   @@main_config = nil # Main config.yaml (HP bar, colors, fonts, etc)
   @@silhouette_file = nil
   @@silhouette_pixbuf = nil
+  @@overlay_image = nil # eyes_back_nerves overlay for back-facing body parts
   @@panel_width_entry = nil
   @@panel_height_entry = nil
   @@marker_size_entry = nil
@@ -138,6 +139,16 @@ module CreatureBarCalibrate
 
       # Try capitalized version
       path = File.join(default_dir, "Rank#{rank}.png")
+      return path if File.exist?(path)
+
+      nil
+    end
+
+    # Find the eyes_back_nerves overlay (in default folder)
+    # This overlay shows back-facing body parts (back, eyes, nerves)
+    def find_overlay_file
+      default_dir = File.join(SILHOUETTE_DIR, 'default')
+      path = File.join(default_dir, 'eyes_back_nerves.png')
       return path if File.exist?(path)
 
       nil
@@ -911,6 +922,22 @@ module CreatureBarCalibrate
           # Place silhouette at origin
           @@silhouette_image = Gtk::Image.new(pixbuf: scaled_pixbuf)
           @@layout.put(@@silhouette_image, 0, 0)
+
+          # Add eyes_back_nerves overlay on top (for back, eyes, nerves positioning)
+          overlay_file = find_overlay_file
+          if overlay_file && File.exist?(overlay_file)
+            overlay_pixbuf = GdkPixbuf::Pixbuf.new(file: overlay_file)
+            # Scale overlay to match silhouette
+            if (silhouette_scale - 1.0).abs > 0.001
+              overlay_pixbuf = overlay_pixbuf.scale_simple(
+                (overlay_pixbuf.width * silhouette_scale).to_i,
+                (overlay_pixbuf.height * silhouette_scale).to_i,
+                GdkPixbuf::InterpType::BILINEAR
+              )
+            end
+            @@overlay_image = Gtk::Image.new(pixbuf: overlay_pixbuf)
+            @@layout.put(@@overlay_image, 0, 0)
+          end
         rescue StandardError # Silently ignore image loading errors
           nil
         end
@@ -1480,8 +1507,9 @@ module CreatureBarCalibrate
       # Update layout size to match new scaled image
       @@layout.set_size_request(scaled_pixbuf.width, scaled_pixbuf.height) if @@layout && !@@layout.destroyed?
 
-      # Remove old image and marker
+      # Remove old image, overlay, and marker
       @@layout.remove(@@silhouette_image) if @@silhouette_image && @@layout && !@@layout.destroyed?
+      @@layout.remove(@@overlay_image) if @@overlay_image && @@layout && !@@layout.destroyed?
       @@layout.remove(@@wound_marker) if @@wound_marker && @@layout && !@@layout.destroyed?
 
       # Add new image at 0,0 (layout is already sized to match)
@@ -1489,6 +1517,26 @@ module CreatureBarCalibrate
         @@silhouette_image = Gtk::Image.new(pixbuf: scaled_pixbuf)
         @@layout.put(@@silhouette_image, 0, 0)
         @@silhouette_image.show
+
+        # Add eyes_back_nerves overlay on top
+        overlay_file = find_overlay_file
+        if overlay_file && File.exist?(overlay_file)
+          begin
+            overlay_pixbuf = GdkPixbuf::Pixbuf.new(file: overlay_file)
+            if (scale - 1.0).abs > 0.001
+              overlay_pixbuf = overlay_pixbuf.scale_simple(
+                (overlay_pixbuf.width * scale).to_i,
+                (overlay_pixbuf.height * scale).to_i,
+                GdkPixbuf::InterpType::BILINEAR
+              )
+            end
+            @@overlay_image = Gtk::Image.new(pixbuf: overlay_pixbuf)
+            @@layout.put(@@overlay_image, 0, 0)
+            @@overlay_image.show
+          rescue StandardError
+            nil
+          end
+        end
       end
 
       # Use configured panel dimensions (no auto-adjustment - user controls size)
@@ -1575,6 +1623,7 @@ module CreatureBarCalibrate
       # Clean up pixbuf references to free memory
       @@silhouette_pixbuf = nil
       @@silhouette_image = nil
+      @@overlay_image = nil
       @@wound_marker = nil
       @@layout = nil
       @@config = nil
