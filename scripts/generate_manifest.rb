@@ -5,7 +5,12 @@
 #   ruby scripts/generate_manifest.rb
 #
 # This scans the assets/ directory and creates a manifest.json with SHA1 digests
-# for each file, organized by package (creaturebar-default, creaturebar-hinterwilds, etc.)
+# for each file, organized by package (creaturebar-default, creaturebar-hinterwilds-shadow, etc.)
+#
+# Folder naming convention:
+#   - Folders can have version suffixes (e.g., hinterwilds_shadow_v2)
+#   - Package names are derived by stripping version suffix and prefixing with 'creaturebar-'
+#   - Example: hinterwilds_shadow_v2 -> creaturebar-hinterwilds-shadow
 
 require 'json'
 require 'digest'
@@ -16,12 +21,23 @@ require 'fileutils'
 ASSETS_DIR = 'assets'
 OUTPUT_FILE = 'manifest.json'
 
-# Package definitions - maps directory names to package names
-PACKAGES = {
-  'default' => 'creaturebar-default',
-  'atoll' => 'creaturebar-atoll',
-  'hinterwilds' => 'creaturebar-hinterwilds'
-}
+# Files/folders to exclude from manifest (source files, work-in-progress)
+EXCLUDE_PATTERNS = [
+  /\.xcf$/,           # GIMP source files
+  /_v1\//,            # Old versions (only include latest v2)
+  /colors\.xcf$/,     # Work files
+  /hinterwilds_shadow\//, # Older non-versioned hinterwilds (use v2 instead)
+  /atoll_shadow_v1\// # Old atoll v1 (use v2 instead)
+]
+
+# Convert folder name to package name
+# e.g., 'hinterwilds_shadow_v2' -> 'creaturebar-hinterwilds-shadow'
+def folder_to_package(folder_name)
+  # Strip version suffix (_v1, _v2, etc.)
+  base_name = folder_name.sub(/_v\d+$/, '')
+  # Convert underscores to hyphens for package name
+  "creaturebar-#{base_name.gsub('_', '-')}"
+end
 
 def calculate_sha1_base64(file_path)
   digest = Digest::SHA1.new
@@ -33,17 +49,22 @@ def calculate_sha1_base64(file_path)
   digest.base64digest
 end
 
+def excluded?(file_path)
+  EXCLUDE_PATTERNS.any? { |pattern| file_path =~ pattern }
+end
+
 def scan_assets
   assets = []
 
-  # Scan silhouettes
+  # Scan silhouettes (PNG files in subfolders)
   Dir.glob(File.join(ASSETS_DIR, 'silhouettes', '*', '*.png')).each do |file_path|
-    # Extract pack name from path (e.g., assets/silhouettes/hinterwilds/warg.png -> hinterwilds)
-    parts = file_path.split(File::SEPARATOR)
-    pack_dir = parts[-2]  # Directory name (default, hinterwilds, etc.)
+    next if excluded?(file_path)
 
-    package_name = PACKAGES[pack_dir]
-    next unless package_name  # Skip unknown packages
+    # Extract pack name from path (e.g., assets/silhouettes/hinterwilds_shadow_v2/warg_shadow.png)
+    parts = file_path.split(File::SEPARATOR)
+    pack_dir = parts[-2]  # Directory name (default, hinterwilds_shadow_v2, etc.)
+
+    package_name = folder_to_package(pack_dir)
 
     # Convert to forward slashes for manifest (cross-platform)
     relative_path = file_path.gsub('\\', '/')
@@ -59,13 +80,14 @@ def scan_assets
     puts "  Added: #{relative_path} (#{package_name})"
   end
 
-  # Scan silhouette configs
+  # Scan silhouette configs (YAML files in subfolders)
   Dir.glob(File.join(ASSETS_DIR, 'silhouette_configs', '*', '*.yaml')).each do |file_path|
+    next if excluded?(file_path)
+
     parts = file_path.split(File::SEPARATOR)
     pack_dir = parts[-2]
 
-    package_name = PACKAGES[pack_dir]
-    next unless package_name
+    package_name = folder_to_package(pack_dir)
 
     relative_path = file_path.gsub('\\', '/')
 

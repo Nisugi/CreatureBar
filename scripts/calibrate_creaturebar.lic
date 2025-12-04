@@ -83,17 +83,89 @@ module CreatureBarCalibrate
   @@panel_size_feedback_label = nil # Shows actual vs configured panel size
 
   class << self
+    # Find a silhouette file by searching all subfolders
+    # Returns the full path or nil if not found
+    def find_silhouette_file(family)
+      return nil unless Dir.exist?(SILHOUETTE_DIR)
+
+      # Get list of subdirectories
+      subdirs = Dir.entries(SILHOUETTE_DIR).select do |entry|
+        path = File.join(SILHOUETTE_DIR, entry)
+        File.directory?(path) && !entry.start_with?('.')
+      end
+
+      # Search each subdirectory for the silhouette
+      subdirs.each do |subdir|
+        # Try shadow style first (current default)
+        path = File.join(SILHOUETTE_DIR, subdir, "#{family}_shadow.png")
+        return path if File.exist?(path)
+
+        # Try color style
+        path = File.join(SILHOUETTE_DIR, subdir, "#{family}_color.png")
+        return path if File.exist?(path)
+
+        # Try legacy naming (no suffix)
+        path = File.join(SILHOUETTE_DIR, subdir, "#{family}.png")
+        return path if File.exist?(path)
+      end
+
+      nil
+    end
+
+    # Find a config file by searching all subfolders
+    # Returns the full path or nil if not found
+    def find_config_file(family)
+      return nil unless Dir.exist?(SILHOUETTE_CONFIG_DIR)
+
+      subdirs = Dir.entries(SILHOUETTE_CONFIG_DIR).select do |entry|
+        path = File.join(SILHOUETTE_CONFIG_DIR, entry)
+        File.directory?(path) && !entry.start_with?('.')
+      end
+
+      subdirs.each do |subdir|
+        path = File.join(SILHOUETTE_CONFIG_DIR, subdir, "#{family}.yaml")
+        return path if File.exist?(path)
+      end
+
+      nil
+    end
+
+    # Find the rank marker files (in default folder)
+    def find_rank_file(rank)
+      default_dir = File.join(SILHOUETTE_DIR, 'default')
+      path = File.join(default_dir, "rank#{rank}.png")
+      return path if File.exist?(path)
+
+      # Try capitalized version
+      path = File.join(default_dir, "Rank#{rank}.png")
+      return path if File.exist?(path)
+
+      nil
+    end
+
     def get_available_silhouettes
-      # Get all PNG files from silhouettes directory (exclude Rank files)
+      # Get all silhouette families from subfolders (exclude rank/marker files)
       silhouettes = []
-      if Dir.exist?(SILHOUETTE_DIR)
-        Dir[File.join(SILHOUETTE_DIR, '*.png')].each do |path|
+      return silhouettes unless Dir.exist?(SILHOUETTE_DIR)
+
+      # Search all subfolders
+      Dir.entries(SILHOUETTE_DIR).each do |subdir|
+        subdir_path = File.join(SILHOUETTE_DIR, subdir)
+        next unless File.directory?(subdir_path) && !subdir.start_with?('.')
+
+        Dir[File.join(subdir_path, '*.png')].each do |path|
           filename = File.basename(path, '.png')
-          # Skip Rank files
-          next if filename =~ /^Rank[0-9]+$/i
-          silhouettes << filename
+
+          # Skip rank/marker files
+          next if filename =~ /^rank[0-9]+$/i
+          next if filename =~ /^eyes_back_nerves$/i
+
+          # Extract family name by removing style suffix
+          family = filename.sub(/_(shadow|color)$/, '')
+          silhouettes << family unless silhouettes.include?(family)
         end
       end
+
       silhouettes.sort
     end
 
@@ -111,10 +183,10 @@ module CreatureBarCalibrate
         @@main_config = {}
       end
 
-      # Load silhouette-specific config
-      config_file = File.join(SILHOUETTE_CONFIG_DIR, "#{silhouette}.yaml")
+      # Load silhouette-specific config (search subfolders)
+      config_file = find_config_file(silhouette)
 
-      if File.exist?(config_file)
+      if config_file && File.exist?(config_file)
         begin
           @@config = YAML.load_file(config_file)
         rescue StandardError
@@ -162,6 +234,19 @@ module CreatureBarCalibrate
       end
     end
 
+    # Determine which subfolder a silhouette belongs to
+    def get_silhouette_subfolder(family)
+      silhouette_path = find_silhouette_file(family)
+      return 'default' unless silhouette_path
+
+      # Extract subfolder from path
+      parts = silhouette_path.split(File::SEPARATOR)
+      sil_idx = parts.index { |p| p == 'silhouettes' }
+      return 'default' unless sil_idx && parts.size > sil_idx + 1
+
+      parts[sil_idx + 1]
+    end
+
     def save_config(show_popup = false)
       unless @@config
         @@config = {}
@@ -169,13 +254,19 @@ module CreatureBarCalibrate
 
       @@config['body_parts'] = @@coordinates
 
-      # Save to silhouette-specific config file
-      FileUtils.mkdir_p(SILHOUETTE_CONFIG_DIR) unless Dir.exist?(SILHOUETTE_CONFIG_DIR)
-      config_file = File.join(SILHOUETTE_CONFIG_DIR, "#{@@current_family}.yaml")
+      # Determine target subfolder based on where the silhouette is located
+      subfolder = get_silhouette_subfolder(@@current_family)
+
+      # Ensure the config subfolder exists
+      config_subfolder = File.join(SILHOUETTE_CONFIG_DIR, subfolder)
+      FileUtils.mkdir_p(config_subfolder) unless Dir.exist?(config_subfolder)
+
+      # Save to silhouette-specific config file in the appropriate subfolder
+      config_file = File.join(config_subfolder, "#{@@current_family}.yaml")
       File.write(config_file, @@config.to_yaml)
 
       if show_popup
-        show_message("Settings saved for #{@@current_family}!\n\nAll silhouette settings saved:\n- Wound coordinates\n- Panel dimensions & scale\n- HP bar display\n- Name & status display")
+        show_message("Settings saved for #{@@current_family}!\n\nSaved to: #{subfolder}/#{@@current_family}.yaml\n\nAll silhouette settings saved:\n- Wound coordinates\n- Panel dimensions & scale\n- HP bar display\n- Name & status display")
       end
     rescue => e
       if show_popup
@@ -222,8 +313,8 @@ module CreatureBarCalibrate
       updated_count = 0
       error_count = 0
 
-      # Iterate through all creature YAML files
-      Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |yaml_file|
+      # Iterate through all creature YAML files in all subfolders
+      Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*', '*.yaml')).each do |yaml_file|
         begin
           # Load existing config
           existing_config = File.exist?(yaml_file) ? YAML.load_file(yaml_file) : {}
@@ -793,7 +884,7 @@ module CreatureBarCalibrate
 
       # Silhouette area (middle - expands to fill)
       silhouette_scale = @@config['scale'] || 0.8
-      @@silhouette_file = File.join(SILHOUETTE_DIR, "#{@@current_family}.png")
+      @@silhouette_file = find_silhouette_file(@@current_family)
 
       @@layout = Gtk::Layout.new
       @@layout.add_events(Gdk::EventMask::BUTTON_PRESS_MASK)
@@ -801,7 +892,7 @@ module CreatureBarCalibrate
         handle_click(event.x.to_i, event.y.to_i)
       end
 
-      if File.exist?(@@silhouette_file)
+      if @@silhouette_file && File.exist?(@@silhouette_file)
         begin
           @@silhouette_pixbuf = GdkPixbuf::Pixbuf.new(file: @@silhouette_file)
 
@@ -971,9 +1062,9 @@ module CreatureBarCalibrate
       end
 
       # Create new marker
-      rank_file = File.join(SILHOUETTE_DIR, "Rank#{@@current_rank}.png")
+      rank_file = find_rank_file(@@current_rank)
 
-      if File.exist?(rank_file)
+      if rank_file && File.exist?(rank_file)
         begin
           pixbuf = GdkPixbuf::Pixbuf.new(file: rank_file)
 
@@ -1364,9 +1455,9 @@ module CreatureBarCalibrate
       return unless @@layout && !@@layout.destroyed?
 
       # Reload the pixbuf from file (in case family changed)
-      @@silhouette_file = File.join(SILHOUETTE_DIR, "#{@@current_family}.png")
+      @@silhouette_file = find_silhouette_file(@@current_family)
 
-      return unless File.exist?(@@silhouette_file)
+      return unless @@silhouette_file && File.exist?(@@silhouette_file)
 
       @@silhouette_pixbuf = GdkPixbuf::Pixbuf.new(file: @@silhouette_file) rescue nil
       return unless @@silhouette_pixbuf
