@@ -948,7 +948,7 @@ module CreatureBarCalibrate
       silhouette_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
       silhouette_container.pack_start(@@layout, expand: false, fill: false, padding: 0)
       silhouette_container.pack_start(Gtk::Box.new(:horizontal, 0), expand: true, fill: true, padding: 0)
-      panel_box.pack_start(silhouette_container, expand: false, fill: false, padding: 0)
+      panel_box.pack_start(silhouette_container, expand: false, fill: false, padding: 1)
 
       # HP bar - use exact settings from per-silhouette config (EXACT same logic as CreatureBar)
       if @@config.dig('hp_bar', 'show') != false

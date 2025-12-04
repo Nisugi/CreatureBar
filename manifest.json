@@ -1,6 +1,55 @@
 {
   "available": [
     {
+      "file": "/assets/silhouettes/atoll_color/assassin_color.png",
+      "type": "data",
+      "md5": "/iLu9effNbKnsnkVvEZ6eV2Cw/0=",
+      "last_commit": 1764814149,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/brawler_color.png",
+      "type": "data",
+      "md5": "DDG6xJvH8RrSHBW2pDCPjQxnoMw=",
+      "last_commit": 1764814953,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/fanatic_color.png",
+      "type": "data",
+      "md5": "p04aVFcrbg2QlMsbva6b4ZOB/8U=",
+      "last_commit": 1764814967,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/protector_color.png",
+      "type": "data",
+      "md5": "QZiu7MlV2ryjGzAhaIJHEIexxjQ=",
+      "last_commit": 1764814924,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/psionicist_color.png",
+      "type": "data",
+      "md5": "bdMTQdsGt9g0pGvyyYLxYzlM+Qk=",
+      "last_commit": 1764814937,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/warden_color.png",
+      "type": "data",
+      "md5": "I95TpXHHCp8RVBJf7OEodk/f/e4=",
+      "last_commit": 1764814912,
+      "package": "creaturebar-atoll-color"
+    },
+    {
+      "file": "/assets/silhouettes/atoll_color/warlock_color.png",
+      "type": "data",
+      "md5": "GtK/pBdbvgblCfoqRx4hpKLtDXo=",
+      "last_commit": 1764814902,
+      "package": "creaturebar-atoll-color"
+    },
+    {
       "file": "/assets/silhouettes/atoll_shadow_v1/assassin_shadow.png",
       "type": "data",
       "md5": "xxGjcVBoIL+6YmGKyvSnd67S2Mw=",
@@ -101,30 +150,163 @@
     {
       "file": "/assets/silhouettes/default/eyes_back_nerves.png",
       "type": "data",
-      "md5": "JIY+er3+30BfgGPK3i5sseu2dQM=",
-      "last_commit": 1764809496,
+      "md5": "iGyC11QIIxNAPj7sXEzS0fezA7s=",
+      "last_commit": 1764827191,
       "package": "creaturebar-default"
     },
     {
       "file": "/assets/silhouettes/default/rank1.png",
       "type": "data",
-      "md5": "IPd9J1bvrZI7zlBtYn7KrrQ6m7w=",
-      "last_commit": 1764560662,
+      "md5": "ZNbTEHPzQXfUfA3rOH1takoDgrA=",
+      "last_commit": 1764826465,
       "package": "creaturebar-default"
     },
     {
       "file": "/assets/silhouettes/default/rank2.png",
       "type": "data",
-      "md5": "0B/SG8L6l3WfaPMlMaFQev+EBfg=",
-      "last_commit": 1764560662,
+      "md5": "jm7jg9QzLwG0u5ZWL34NEpOOt24=",
+      "last_commit": 1764826478,
       "package": "creaturebar-default"
     },
     {
       "file": "/assets/silhouettes/default/rank3.png",
       "type": "data",
-      "md5": "pOAoEIP0I9eYi+AwX5DBOoV4WRY=",
-      "last_commit": 1764560662,
+      "md5": "mYCAqmLMw+DjbzIueonPFZ1MMpc=",
+      "last_commit": 1764826496,
       "package": "creaturebar-default"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/angargeist_color.png",
+      "type": "data",
+      "md5": "cPuitU4Spt35clxlDoYX7S6q8f0=",
+      "last_commit": 1764814228,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/berserker_color.png",
+      "type": "data",
+      "md5": "BLCk6v6yneFF9gXVoi95Kp80yYI=",
+      "last_commit": 1764814257,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/bloodspeaker_color.png",
+      "type": "data",
+      "md5": "SCTCYNZsE7ZGoZSAERVAa/Pk6Q0=",
+      "last_commit": 1764814273,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/cannibal_color.png",
+      "type": "data",
+      "md5": "UEewlZxAwpm0dkBI23Wwvh1lI0s=",
+      "last_commit": 1764814286,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/disciple_color.png",
+      "type": "data",
+      "md5": "2haIix7yBxTDPsk3hXvJtomLtOw=",
+      "last_commit": 1764814132,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/disir_color.png",
+      "type": "data",
+      "md5": "EEIS7cg9IkYX7LzCdFBs+NhoBII=",
+      "last_commit": 1764814295,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/draugr_color.png",
+      "type": "data",
+      "md5": "dGoQRZ+kkmrO11KUG43s43eNhwo=",
+      "last_commit": 1764814306,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/golem_color.png",
+      "type": "data",
+      "md5": "0LqO8fGnMfTzOMfApYJdbhGkXxQ=",
+      "last_commit": 1764814316,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/hinterboar_color.png",
+      "type": "data",
+      "md5": "HcawVzxr2XDV8GBcVEYEgD91ms8=",
+      "last_commit": 1764814324,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/mastodon_color.png",
+      "type": "data",
+      "md5": "gIUXYiX9Ec0lxF+5FJ9VSo5NWXg=",
+      "last_commit": 1764814335,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/mutant_color.png",
+      "type": "data",
+      "md5": "EMPUIaPdUMpujg7W3QJS5r8YRqE=",
+      "last_commit": 1764814419,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/ooze_color.png",
+      "type": "data",
+      "md5": "cHpMDV5JEs4Qo9WheUT7LdC/vYU=",
+      "last_commit": 1764814395,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/oozling_color.png",
+      "type": "data",
+      "md5": "Mcon0t07yCllSYoVmfugNvNmBwo=",
+      "last_commit": 1764814406,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/shield-maiden_color.png",
+      "type": "data",
+      "md5": "FDXFXrFCl1pYTaFMeGwVTZJ9EMs=",
+      "last_commit": 1764814435,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/skald_color.png",
+      "type": "data",
+      "md5": "T6RhmK30KQMFJSvhjsufqgWKuV8=",
+      "last_commit": 1764814537,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/undansormr_color.png",
+      "type": "data",
+      "md5": "LuQFYzswahKnUTtFFkKFsbxLREc=",
+      "last_commit": 1764814867,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/valravn_color.png",
+      "type": "data",
+      "md5": "TRT4YpiAKLQEGIuQw6Do0WtzDEE=",
+      "last_commit": 1764814878,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/warg_color.png",
+      "type": "data",
+      "md5": "Raa17t//Xnao5jGbT5p/PKbJcqE=",
+      "last_commit": 1764814978,
+      "package": "creaturebar-hinterwilds-color"
+    },
+    {
+      "file": "/assets/silhouettes/hinterwilds_color/wendigo_color.png",
+      "type": "data",
+      "md5": "8fH6yzeaPJJr9xEPw3lPPcgvfKY=",
+      "last_commit": 1764814891,
+      "package": "creaturebar-hinterwilds-color"
     },
     {
       "file": "/assets/silhouettes/hinterwilds_shadow/angargeist_shadow.png",
@@ -197,6 +379,13 @@
       "package": "creaturebar-hinterwilds-shadow"
     },
     {
+      "file": "/assets/silhouettes/hinterwilds_shadow/mutant_shadow.png",
+      "type": "data",
+      "md5": "Zo6nvfDkSZBeBb6kr0IveLnsmBw=",
+      "last_commit": 1764811518,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
       "file": "/assets/silhouettes/hinterwilds_shadow/ooze_shadow.png",
       "type": "data",
       "md5": "Bm3vsbDkoDNNN20gCtMfeZMAah0=",
@@ -211,14 +400,7 @@
       "package": "creaturebar-hinterwilds-shadow"
     },
     {
-      "file": "/assets/silhouettes/hinterwilds_shadow/reptilian_shadow.png",
-      "type": "data",
-      "md5": "Zo6nvfDkSZBeBb6kr0IveLnsmBw=",
-      "last_commit": 1764811518,
-      "package": "creaturebar-hinterwilds-shadow"
-    },
-    {
-      "file": "/assets/silhouettes/hinterwilds_shadow/shield_maiden_shadow.png",
+      "file": "/assets/silhouettes/hinterwilds_shadow/shield-maiden_shadow.png",
       "type": "data",
       "md5": "6GzhONq3WOSxH4NGT/kmAs3CfwY=",
       "last_commit": 1764811499,
@@ -407,6 +589,69 @@
       "package": "creaturebar-hinterwilds-shadow-v2"
     },
     {
+      "file": "/assets/silhouettes/hive_color/broodtender_color.png",
+      "type": "data",
+      "md5": "QwoYAC7US65MCaFyI/OHPc2A4bk=",
+      "last_commit": 1764814161,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/defender_color.png",
+      "type": "data",
+      "md5": "hklasKxRCsA/3mcKvY551lr2cMw=",
+      "last_commit": 1764814214,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/myrmidon_color.png",
+      "type": "data",
+      "md5": "wwh6aji9Z9pctfEvypw580OdMk8=",
+      "last_commit": 1764815074,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/ravager_color.png",
+      "type": "data",
+      "md5": "CxT5ZapmS9HopoTPkTvojYqKrOI=",
+      "last_commit": 1764815061,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/roa'ter_color.png",
+      "type": "data",
+      "md5": "yduYdvsSFxJh8Vrh1V9FKkt1qRM=",
+      "last_commit": 1764815086,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/stalker_color.png",
+      "type": "data",
+      "md5": "PTl5ZJjFNRRiyriFMH7eabc2DMk=",
+      "last_commit": 1764815096,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/strandweaver_color.png",
+      "type": "data",
+      "md5": "6WwQ+PZbOqC7YaTDC+K0Sri2xCY=",
+      "last_commit": 1764815105,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/thrall_color.png",
+      "type": "data",
+      "md5": "wM3IU/+fwLLEOyvK5ARQv0rCk8s=",
+      "last_commit": 1764815001,
+      "package": "creaturebar-hive-color"
+    },
+    {
+      "file": "/assets/silhouettes/hive_color/worker_color.png",
+      "type": "data",
+      "md5": "DjbjxpLSb7Eut1+T+BEmr71b/Fk=",
+      "last_commit": 1764815027,
+      "package": "creaturebar-hive-color"
+    },
+    {
       "file": "/assets/silhouettes/hive_shadow/broodtender_shadow.png",
       "type": "data",
       "md5": "8qJsKHG3bIfpemCn/nHVVQ2F8WA=",
@@ -421,7 +666,7 @@
       "package": "creaturebar-hive-shadow"
     },
     {
-      "file": "/assets/silhouettes/hive_shadow/myrmidion_shadow.png",
+      "file": "/assets/silhouettes/hive_shadow/myrmidon_shadow.png",
       "type": "data",
       "md5": "X/FID8Gb5gTsQHmgj6TMa/V693I=",
       "last_commit": 1764811850,
@@ -468,6 +713,55 @@
       "md5": "aUaKrGxX9bVYvOcbgM0gAqHs9cU=",
       "last_commit": 1764811782,
       "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/banshee_color.png",
+      "type": "data",
+      "md5": "F1OzE1HheF3YvTddc24AbU4IZ0s=",
+      "last_commit": 1764815122,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/conjurer_color.png",
+      "type": "data",
+      "md5": "6rkdUSqpuqlwC+ZMt4HB+kOla2g=",
+      "last_commit": 1764814177,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/deathknight_color.png",
+      "type": "data",
+      "md5": "jVmHV5/yxvOX5xLx09yuvUYh7B8=",
+      "last_commit": 1764814190,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/dreadsteed_color.png",
+      "type": "data",
+      "md5": "kplLTFNOdyLyA8im2A6r90jUUYQ=",
+      "last_commit": 1764814201,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/ghast_color.png",
+      "type": "data",
+      "md5": "EZ5Ab8myZRguLNTclmBCa2UEcdo=",
+      "last_commit": 1764815049,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/grotesque_color.png",
+      "type": "data",
+      "md5": "tprEc/ZS3HLfOl9TpT/PapqNM7A=",
+      "last_commit": 1764814990,
+      "package": "creaturebar-moonsedge-color"
+    },
+    {
+      "file": "/assets/silhouettes/moonsedge_color/vampire_color.png",
+      "type": "data",
+      "md5": "Knyows5KXExoVjsE1MWYawoVx1s=",
+      "last_commit": 1764815038,
+      "package": "creaturebar-moonsedge-color"
     },
     {
       "file": "/assets/silhouettes/moonsedge_shadow/banshee_shadow.png",
@@ -519,12 +813,306 @@
       "package": "creaturebar-moonsedge-shadow"
     },
     {
+      "file": "/assets/silhouette_configs/atoll_shadow/assassin.yaml",
+      "type": "data",
+      "md5": "sY6QkIF4YvQ+1qDXeX0s0Djn0B8=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/brawler.yaml",
+      "type": "data",
+      "md5": "krb1rAEApQ9ZjpfulXkamcyuAF4=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/fanatic.yaml",
+      "type": "data",
+      "md5": "bZY5Dwh5RiC8zo0UwT03gWumgx0=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/protector.yaml",
+      "type": "data",
+      "md5": "LXiHXPW/3ADx/6uA7CqDYAl6d3E=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/psionicist.yaml",
+      "type": "data",
+      "md5": "L6zHwMqkuqaZJX/rQnwKEAABrFg=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/warden.yaml",
+      "type": "data",
+      "md5": "P2JMUq6d9Ver0vWG5qweHomBozY=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/atoll_shadow/warlock.yaml",
+      "type": "data",
+      "md5": "wUzMq3/lBAJhopr5MrWD5pe3zVA=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-atoll-shadow"
+    },
+    {
       "file": "/assets/silhouette_configs/default/default.yaml",
       "type": "data",
       "md5": "gxjqvWRJA0NNraag0eRM9GurDo8=",
       "last_commit": 1764581067,
       "package": "creaturebar-default"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/angargeist.yaml",
+      "type": "data",
+      "md5": "tKlGeRCrKU1vxyAOmLVIDKw5FvE=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/berserker.yaml",
+      "type": "data",
+      "md5": "7nmQTQx81f3oa7CLcQNy1z5z2eg=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/bloodspeaker.yaml",
+      "type": "data",
+      "md5": "WM2PT2FMZEiqsNGUalXC1+NvJtI=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/cannibal.yaml",
+      "type": "data",
+      "md5": "w0RIJAaUm0nDoJ9nEi8IsztSE6g=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/disciple.yaml",
+      "type": "data",
+      "md5": "k3LXMpT7gf8LvcMZHo3Ljjjv9Q0=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/disir.yaml",
+      "type": "data",
+      "md5": "4gnlwOjp4gQYhjb66c8iWAOpTz8=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/draugr.yaml",
+      "type": "data",
+      "md5": "8ukaOJ9SoPvBMnPZk/ssrXv8588=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/golem.yaml",
+      "type": "data",
+      "md5": "OTzZfoVh8LWbgTglQ/NefjSCvGs=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/hinterboar.yaml",
+      "type": "data",
+      "md5": "EdPjnDkMMEMh7g4xghoXZEgmlq0=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/mastodon.yaml",
+      "type": "data",
+      "md5": "yPZZhZpqe2NZt4B9th3CIcujb0s=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/mutant.yaml",
+      "type": "data",
+      "md5": "QI6FgeKxwfMzKppEmPUx9OajnkI=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/ooze.yaml",
+      "type": "data",
+      "md5": "cKqwOvbJlo3eJIoegAH0F1ACOUY=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/oozling.yaml",
+      "type": "data",
+      "md5": "eLYnZFeet5E02B/anmlU2iiKJtA=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/shield-maiden.yaml",
+      "type": "data",
+      "md5": "MjnIytJpl5CBpH2Tnlg4xoK3z5E=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/skald.yaml",
+      "type": "data",
+      "md5": "VT1y/6cEkcE1qwBXkBWf0FWM0R4=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/undansormr.yaml",
+      "type": "data",
+      "md5": "mFryeuCTO0lS9Ymj4HfKAoVhvlA=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/valravn.yaml",
+      "type": "data",
+      "md5": "wxnczSeaepTtwZswsZEJ4fif1iY=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/warg.yaml",
+      "type": "data",
+      "md5": "SYIVJ9swplnHNIba5PGgdQEy7po=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hinterwilds_shadow/wendigo.yaml",
+      "type": "data",
+      "md5": "QmGQDT/srfmgh/4427t2uhCwaBg=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hinterwilds-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/broodtender.yaml",
+      "type": "data",
+      "md5": "aTHGynjrMlplPBFiYN7UqTNMsGo=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/defender.yaml",
+      "type": "data",
+      "md5": "DHbRDo/5K/KzCGdbaGZE4XDQo2M=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/myrmidon.yaml",
+      "type": "data",
+      "md5": "huAc97hEWZdJvgfqYR8hELfulX4=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/ravager.yaml",
+      "type": "data",
+      "md5": "3bEOuS6lXWfcW3vfqxtmpBpOqus=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/roa'ter.yaml",
+      "type": "data",
+      "md5": "fqRtRAfuMEnrWQIjLDB4fxE3O7E=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/stalker.yaml",
+      "type": "data",
+      "md5": "TIAYdaXt1T1RYqEHjl+13hwXb9o=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/strandweaver.yaml",
+      "type": "data",
+      "md5": "rF29NkuUorxQmnanhEXfmYiMayg=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/thrall.yaml",
+      "type": "data",
+      "md5": "Dryv8tVTTUe98US/MfKihngrTBY=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/hive_shadow/worker.yaml",
+      "type": "data",
+      "md5": "+c9nGSH8Yu3SsgIePLvfQog9ZZc=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-hive-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/banshee.yaml",
+      "type": "data",
+      "md5": "SM2tGLx409wii/MIXYD2gDbZqp8=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/conjurer.yaml",
+      "type": "data",
+      "md5": "FfGekc4smuBq+pH71o0p1jSbwUE=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/deathknight.yaml",
+      "type": "data",
+      "md5": "sZw0ukD8coIGEgrtNq5j2MFmsNs=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/dreadsteed.yaml",
+      "type": "data",
+      "md5": "Uf+2FJF3lWXPlHG3FNdD5+Ux/ig=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/ghast.yaml",
+      "type": "data",
+      "md5": "qmx8lKD/OcyfN2UNqjVFtg8kuGU=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/grotesque.yaml",
+      "type": "data",
+      "md5": "Qt170+TtAw0/VIV+lL47rMM8FnM=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
+    },
+    {
+      "file": "/assets/silhouette_configs/moonsedge_shadow/vampire.yaml",
+      "type": "data",
+      "md5": "9No9XHI1S0XQAvXSFKieRTFwSM8=",
+      "last_commit": 1764832364,
+      "package": "creaturebar-moonsedge-shadow"
     }
   ],
-  "last_updated": 1764825251
+  "last_updated": 1764832923
 }
