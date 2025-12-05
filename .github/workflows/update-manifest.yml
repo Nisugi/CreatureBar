@@ -1,0 +1,47 @@
+name: Update Manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/**'
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Generate manifest
+        run: ruby scripts/generate_manifest.rb
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet manifest.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push manifest
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Update manifest.json
+
+          Auto-generated from assets changes.
+
+          🤖 Generated with GitHub Actions"
+          git push
