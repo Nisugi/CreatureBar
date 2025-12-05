@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'assets/**'
+  workflow_dispatch:  # Allow manual runs from GitHub UI
 
 jobs:
   update-manifest:
