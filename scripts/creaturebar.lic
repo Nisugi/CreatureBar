@@ -123,6 +123,7 @@ module CreatureBar
     input_buffer = []
 
     action = proc { |cmd|
+      echo cmd
       if cmd =~ valid_pattern
         input_buffer.push(cmd)
         nil # block from going to game
@@ -437,10 +438,9 @@ module CreatureBar
             style = path_parts[cfg_idx + 1]
             region = path_parts[cfg_idx + 2]
             target_dir = File.join(base_dir, style, region)
-          elsif cfg_idx && path_parts.size > cfg_idx + 2
-            # Default folder: configs/default/default.yaml
-            subfolder = path_parts[cfg_idx + 1]
-            target_dir = File.join(base_dir, subfolder)
+          elsif cfg_idx && path_parts.size == cfg_idx + 2
+            # Root file: configs/default.yaml
+            target_dir = base_dir
           else
             respond "[CreatureBar] Unexpected config path structure: #{remote_path}"
             return false
@@ -486,11 +486,11 @@ module CreatureBar
           remote_path = asset[:file]
           remote_digest = asset[:md5]
 
-          # Determine local path
+          # Determine local path based on asset type
           if remote_path.include?('/silhouettes/')
             filename = File.basename(remote_path)
             local_path = File.join(SILHOUETTE_DIR, filename)
-          elsif remote_path.include?('/silhouette_configs/')
+          elsif remote_path.include?('/configs/')
             filename = File.basename(remote_path)
             local_path = File.join(SILHOUETTE_CONFIG_DIR, filename)
           else
