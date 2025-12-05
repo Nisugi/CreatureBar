@@ -5,13 +5,18 @@
 #   ruby scripts/generate_manifest.rb
 #
 # This scans the assets/ directory and creates a manifest.json with SHA1 digests
-# for each file, organized by package (creaturebar-default, creaturebar-atoll-shadow-v2, etc.)
+# for each file, organized by package.
 #
-# Folder naming convention:
-#   - Folders can have version suffixes (e.g., hinterwilds_shadow_v2)
-#   - Package names preserve version: 'creaturebar-{folder}' with underscores as hyphens
-#   - Example: hinterwilds_shadow_v2 -> creaturebar-hinterwilds-shadow-v2
-#   - Users can choose which version to download; locally versions are stripped
+# New folder structure:
+#   assets/silhouettes/default.png, rank1.png, eyes_back_nerves.png (root level)
+#   assets/silhouettes/{style}/{region}[_v#]/{family}.png
+#   assets/configs/default.yaml (root level)
+#   assets/configs/{style}/{region}[_v#]/{family}.yaml
+#
+# Package naming:
+#   - Root files: creaturebar-default
+#   - Region files: creaturebar-{style}-{region}[-v#]
+#   - Example: greyscale/hinterwilds_v2 -> creaturebar-greyscale-hinterwilds-v2
 
 require 'json'
 require 'digest'
@@ -25,14 +30,15 @@ OUTPUT_FILE = 'manifest.json'
 # Files/folders to exclude from manifest (source files, work-in-progress)
 EXCLUDE_PATTERNS = [
   /\.xcf$/,           # GIMP source files
-  /colors\.xcf$/      # Work files
+  /colors\.xcf$/,     # Work files
+  /shadows\.xcf$/     # Work files
 ]
 
-# Convert folder name to package name (preserve version suffix)
-# e.g., 'hinterwilds_shadow_v2' -> 'creaturebar-hinterwilds-shadow-v2'
-def folder_to_package(folder_name)
-  # Convert underscores to hyphens for package name (keep version)
-  "creaturebar-#{folder_name.gsub('_', '-')}"
+# Convert style/region folder to package name
+# e.g., 'greyscale', 'hinterwilds_v2' -> 'creaturebar-greyscale-hinterwilds-v2'
+def folder_to_package(style, region)
+  # Convert underscores to hyphens for package name
+  "creaturebar-#{style}-#{region.gsub('_', '-')}"
 end
 
 def calculate_sha1_base64(file_path)
@@ -49,53 +55,65 @@ def excluded?(file_path)
   EXCLUDE_PATTERNS.any? { |pattern| file_path =~ pattern }
 end
 
+def add_asset(assets, file_path, package_name)
+  return if excluded?(file_path)
+
+  # Convert to forward slashes for manifest (cross-platform)
+  relative_path = file_path.gsub('\\', '/')
+
+  assets << {
+    'file' => "/#{relative_path}",
+    'type' => 'data',
+    'md5' => calculate_sha1_base64(file_path),  # Jinx uses 'md5' key but accepts SHA1
+    'last_commit' => File.mtime(file_path).to_i,
+    'package' => package_name
+  }
+
+  puts "  Added: #{relative_path} (#{package_name})"
+end
+
 def scan_assets
   assets = []
 
-  # Scan silhouettes (PNG files in subfolders)
-  Dir.glob(File.join(ASSETS_DIR, 'silhouettes', '*', '*.png')).each do |file_path|
-    next if excluded?(file_path)
+  # --- Silhouettes ---
 
-    # Extract pack name from path (e.g., assets/silhouettes/hinterwilds_shadow_v2/warg_shadow.png)
-    parts = file_path.split(File::SEPARATOR)
-    pack_dir = parts[-2]  # Directory name (default, hinterwilds_shadow_v2, etc.)
-
-    package_name = folder_to_package(pack_dir)
-
-    # Convert to forward slashes for manifest (cross-platform)
-    relative_path = file_path.gsub('\\', '/')
-
-    assets << {
-      'file' => "/#{relative_path}",
-      'type' => 'data',
-      'md5' => calculate_sha1_base64(file_path),  # Jinx uses 'md5' key but accepts SHA1
-      'last_commit' => File.mtime(file_path).to_i,
-      'package' => package_name
-    }
-
-    puts "  Added: #{relative_path} (#{package_name})"
+  # Root level silhouettes (default.png, rank*.png, eyes_back_nerves.png)
+  Dir.glob(File.join(ASSETS_DIR, 'silhouettes', '*.png')).each do |file_path|
+    add_asset(assets, file_path, 'creaturebar-default')
   end
 
-  # Scan silhouette configs (YAML files in subfolders)
-  Dir.glob(File.join(ASSETS_DIR, 'silhouette_configs', '*', '*.yaml')).each do |file_path|
+  # Style/region silhouettes: silhouettes/{style}/{region}/*.png
+  Dir.glob(File.join(ASSETS_DIR, 'silhouettes', '*', '*', '*.png')).each do |file_path|
     next if excluded?(file_path)
 
+    # Extract style and region from path
+    # e.g., assets/silhouettes/greyscale/hinterwilds_v2/valravn.png
     parts = file_path.split(File::SEPARATOR)
-    pack_dir = parts[-2]
+    style = parts[-3]   # greyscale or color
+    region = parts[-2]  # hinterwilds, atoll, hinterwilds_v2, etc.
 
-    package_name = folder_to_package(pack_dir)
+    package_name = folder_to_package(style, region)
+    add_asset(assets, file_path, package_name)
+  end
 
-    relative_path = file_path.gsub('\\', '/')
+  # --- Configs ---
 
-    assets << {
-      'file' => "/#{relative_path}",
-      'type' => 'data',
-      'md5' => calculate_sha1_base64(file_path),
-      'last_commit' => File.mtime(file_path).to_i,
-      'package' => package_name
-    }
+  # Root level config (default.yaml)
+  Dir.glob(File.join(ASSETS_DIR, 'configs', '*.yaml')).each do |file_path|
+    add_asset(assets, file_path, 'creaturebar-default')
+  end
 
-    puts "  Added: #{relative_path} (#{package_name})"
+  # Style/region configs: configs/{style}/{region}/*.yaml
+  Dir.glob(File.join(ASSETS_DIR, 'configs', '*', '*', '*.yaml')).each do |file_path|
+    next if excluded?(file_path)
+
+    # Extract style and region from path
+    parts = file_path.split(File::SEPARATOR)
+    style = parts[-3]
+    region = parts[-2]
+
+    package_name = folder_to_package(style, region)
+    add_asset(assets, file_path, package_name)
   end
 
   assets
@@ -125,7 +143,7 @@ def generate_manifest
   packages = assets.group_by { |a| a['package'] }
   packages.each do |pkg, pkg_assets|
     silhouettes = pkg_assets.count { |a| a['file'].include?('/silhouettes/') }
-    configs = pkg_assets.count { |a| a['file'].include?('/silhouette_configs/') }
+    configs = pkg_assets.count { |a| a['file'].include?('/configs/') }
     puts "  #{pkg}: #{silhouettes} silhouettes, #{configs} configs"
   end
 

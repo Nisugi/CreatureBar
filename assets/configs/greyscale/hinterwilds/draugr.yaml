@@ -1,0 +1,74 @@
+---
+scale: 0.7
+marker_size: 10
+panel_width: 89
+panel_height: 136
+name_display:
+  show: false
+  font_size: 8
+  font_weight: normal
+  mode: name
+hp_bar:
+  show: true
+  show_bar: true
+  text_style: overlay
+  show_text: false
+  text_position: top
+  show_hp_prefix: true
+  show_numbers: true
+  show_percentage: true
+  width: 75
+  height: 4
+  font_size: 8
+status:
+  show: true
+  font_size: 8
+body_parts:
+  head:
+  - 47
+  - 7
+  neck:
+  - 46
+  - 18
+  chest:
+  - 46
+  - 33
+  abdomen:
+  - 45
+  - 58
+  back:
+  - 0
+  - 138
+  leftArm:
+  - 63
+  - 37
+  rightArm:
+  - 24
+  - 36
+  leftHand:
+  - 72
+  - 77
+  rightHand:
+  - 17
+  - 73
+  leftLeg:
+  - 55
+  - 83
+  rightLeg:
+  - 34
+  - 83
+  leftFoot:
+  - 61
+  - 122
+  rightFoot:
+  - 21
+  - 128
+  leftEye:
+  - 85
+  - 1
+  rightEye:
+  - 4
+  - -1
+  nerves:
+  - 88
+  - 139
