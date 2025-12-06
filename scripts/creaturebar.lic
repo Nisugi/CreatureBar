@@ -486,13 +486,19 @@ module CreatureBar
           remote_path = asset[:file]
           remote_digest = asset[:md5]
 
-          # Determine local path based on asset type
+          # Determine local path based on asset type, preserving style/region structure
           if remote_path.include?('/silhouettes/')
+            path_parts = remote_path.split('/')
+            sil_idx = path_parts.index('silhouettes')
+            relative_path = path_parts[(sil_idx + 1)..-1].join(File::SEPARATOR)
             filename = File.basename(remote_path)
-            local_path = File.join(SILHOUETTE_DIR, filename)
+            local_path = File.join(SILHOUETTE_DIR, relative_path)
           elsif remote_path.include?('/configs/')
+            path_parts = remote_path.split('/')
+            cfg_idx = path_parts.index('configs')
+            relative_path = path_parts[(cfg_idx + 1)..-1].join(File::SEPARATOR)
             filename = File.basename(remote_path)
-            local_path = File.join(SILHOUETTE_CONFIG_DIR, filename)
+            local_path = File.join(SILHOUETTE_CONFIG_DIR, relative_path)
           else
             next
           end
@@ -574,7 +580,7 @@ module CreatureBar
           silhouette_backup = File.join(backup_dir, 'silhouettes')
           FileUtils.mkdir_p(silhouette_backup)
 
-          Dir.glob(File.join(SILHOUETTE_DIR, '*.png')).each do |f|
+          Dir.glob(File.join(SILHOUETTE_DIR, '**', '*.png')).each do |f|
             FileUtils.cp(f, silhouette_backup) rescue nil
             File.delete(f) rescue nil
           end
@@ -586,7 +592,7 @@ module CreatureBar
           config_backup = File.join(backup_dir, 'silhouette_configs')
           FileUtils.mkdir_p(config_backup)
 
-          Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |f|
+          Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '**', '*.yaml')).each do |f|
             FileUtils.cp(f, config_backup) rescue nil
             File.delete(f) rescue nil
           end
