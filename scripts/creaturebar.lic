@@ -24,6 +24,7 @@ require 'gtk3'
 require 'yaml'
 require 'fileutils'
 require File.join(LIB_DIR, 'common', 'db_store.rb')
+load(File.join(SCRIPT_DIR, 'jinx.lic'))
 
 module CreatureBar
   VERSION = '1.0.0'
@@ -123,7 +124,6 @@ module CreatureBar
     input_buffer = []
 
     action = proc { |cmd|
-      echo cmd
       if cmd =~ valid_pattern
         input_buffer.push(cmd)
         nil # block from going to game
@@ -486,19 +486,13 @@ module CreatureBar
           remote_path = asset[:file]
           remote_digest = asset[:md5]
 
-          # Determine local path based on asset type, preserving style/region structure
+          # Determine local path based on asset type
           if remote_path.include?('/silhouettes/')
-            path_parts = remote_path.split('/')
-            sil_idx = path_parts.index('silhouettes')
-            relative_path = path_parts[(sil_idx + 1)..-1].join(File::SEPARATOR)
             filename = File.basename(remote_path)
-            local_path = File.join(SILHOUETTE_DIR, relative_path)
+            local_path = File.join(SILHOUETTE_DIR, filename)
           elsif remote_path.include?('/configs/')
-            path_parts = remote_path.split('/')
-            cfg_idx = path_parts.index('configs')
-            relative_path = path_parts[(cfg_idx + 1)..-1].join(File::SEPARATOR)
             filename = File.basename(remote_path)
-            local_path = File.join(SILHOUETTE_CONFIG_DIR, relative_path)
+            local_path = File.join(SILHOUETTE_CONFIG_DIR, filename)
           else
             next
           end
@@ -580,7 +574,7 @@ module CreatureBar
           silhouette_backup = File.join(backup_dir, 'silhouettes')
           FileUtils.mkdir_p(silhouette_backup)
 
-          Dir.glob(File.join(SILHOUETTE_DIR, '**', '*.png')).each do |f|
+          Dir.glob(File.join(SILHOUETTE_DIR, '*.png')).each do |f|
             FileUtils.cp(f, silhouette_backup) rescue nil
             File.delete(f) rescue nil
           end
@@ -592,7 +586,7 @@ module CreatureBar
           config_backup = File.join(backup_dir, 'silhouette_configs')
           FileUtils.mkdir_p(config_backup)
 
-          Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '**', '*.yaml')).each do |f|
+          Dir.glob(File.join(SILHOUETTE_CONFIG_DIR, '*.yaml')).each do |f|
             FileUtils.cp(f, config_backup) rescue nil
             File.delete(f) rescue nil
           end
@@ -2873,14 +2867,23 @@ module CreatureBar
       cr.paint
 
       # Convert back to pixbuf
+      # Cairo ARGB32 stores as BGRA in memory on little-endian systems (Windows)
+      # GdkPixbuf expects RGBA, so we need to swap R and B channels
+      raw = surface.data
+      pixels = raw.unpack('C*')
+      (0...pixels.length).step(4) do |i|
+        pixels[i], pixels[i + 2] = pixels[i + 2], pixels[i]  # Swap B and R
+      end
+      rgba_data = pixels.pack('C*')
+
       GdkPixbuf::Pixbuf.new(
-        data: surface.data,
+        data: rgba_data,
         colorspace: :rgb,
         has_alpha: true,
         bits_per_sample: 8,
         width: width,
         height: height,
-        row_stride: surface.stride
+        row_stride: width * 4  # RGBA = 4 bytes per pixel
       )
     end
 
