@@ -1,74 +1,86 @@
 ---
-scale: 0.7
-marker_size: 10
-panel_width: 89
-panel_height: 136
+scale: 1.0
+marker_size: 14
+panel_width: 114
+panel_height: 181
 name_display:
   show: false
   font_size: 8
-  font_weight: normal
-  mode: name
+  font_family: ''
+  font_weight: bold
+  max_length: 30
+  mode: noun
 hp_bar:
+  height: 4
+  width: 100
+  show_text: false
+  show_percentage: false
+  text_style: overlay
+  font_size: 8
+  ranges:
+    low:
+      min: 0
+      max: 33
+    mid:
+      min: 34
+      max: 66
+    high:
+      min: 67
+      max: 100
+  show_hp_prefix: false
+  show_numbers: true
   show: true
   show_bar: true
-  text_style: overlay
-  show_text: false
-  text_position: top
-  show_hp_prefix: true
-  show_numbers: true
-  show_percentage: true
-  width: 75
-  height: 4
-  font_size: 8
+  text_position: bottom
 status:
   show: true
   font_size: 8
 body_parts:
   head:
-  - 35
-  - 81
+  - 33
+  - 76
   neck:
-  - 37
-  - 95
+  - 32
+  - 91
   chest:
-  - 44
-  - 68
-  abdomen:
-  - 53
-  - 44
-  back:
-  - -2
-  - 139
-  leftArm:
-  - 53
-  - 86
-  rightArm:
-  - 21
-  - 81
-  leftHand:
-  - 48
-  - 116
-  rightHand:
-  - 9
-  - 110
-  leftLeg:
-  - 71
-  - 82
-  rightLeg:
+  - 36
   - 65
-  - 92
+  abdomen:
+  - 42
+  - 37
+  back:
+  - -3
+  - 137
+  leftArm:
+  - 56
+  - 82
+  rightArm:
+  - 11
+  - 78
+  leftHand:
+  - 50
+  - 118
+  rightHand:
+  - 10
+  - 114
+  leftLeg:
+  - 79
+  - 80
+  rightLeg:
+  - 70
+  - 91
   leftFoot:
   - 87
   - 97
   rightFoot:
-  - 73
-  - 105
+  - 74
+  - 110
   leftEye:
   - 83
   - -1
   rightEye:
   - 3
-  - 1
+  - 0
   nerves:
   - 87
   - 138

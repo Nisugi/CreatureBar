@@ -1,25 +1,37 @@
 ---
-scale: 0.7
-marker_size: 10
-panel_width: 89
-panel_height: 136
+scale: 1.0
+marker_size: 14
+panel_width: 114
+panel_height: 181
 name_display:
   show: false
   font_size: 8
-  font_weight: normal
-  mode: name
+  font_family: ''
+  font_weight: bold
+  max_length: 30
+  mode: noun
 hp_bar:
+  height: 4
+  width: 100
+  show_text: false
+  show_percentage: false
+  text_style: overlay
+  font_size: 8
+  ranges:
+    low:
+      min: 0
+      max: 33
+    mid:
+      min: 34
+      max: 66
+    high:
+      min: 67
+      max: 100
+  show_hp_prefix: false
+  show_numbers: true
   show: true
   show_bar: true
-  text_style: overlay
-  show_text: false
-  text_position: top
-  show_hp_prefix: true
-  show_numbers: true
-  show_percentage: true
-  width: 75
-  height: 4
-  font_size: 8
+  text_position: bottom
 status:
   show: true
   font_size: 8
@@ -31,11 +43,11 @@ body_parts:
   - 53
   - 20
   chest:
-  - 44
-  - 33
+  - 47
+  - 32
   abdomen:
-  - 43
-  - 51
+  - 48
+  - 47
   back:
   - -1
   - 138
@@ -58,11 +70,11 @@ body_parts:
   - 28
   - 85
   leftFoot:
-  - 66
-  - 116
+  - 70
+  - 124
   rightFoot:
-  - 14
-  - 121
+  - 11
+  - 127
   leftEye:
   - 83
   - 0
